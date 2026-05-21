@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device, initial-scale=1.0">
 <title>Dream Conversion Station</title>
 <style>
   :root {
@@ -24,7 +24,7 @@
     --transition-fast: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
 
   body {
     font-family: var(--font-sans);
@@ -213,12 +213,12 @@
   }
   .btn-secondary:hover { border-color: var(--accent-dim); color: var(--text); }
 
-  /* ---- STAGE 3: RECEIVER MODE ---- */
+  /* ---- STAGE 3: RECEIVER (SELF ACROSS TIME) ---- */
   .receiver-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1rem;
-    max-width: 700px;
+    max-width: 760px;
     width: 100%;
   }
   .receiver-card {
@@ -226,7 +226,7 @@
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--border);
-    padding: 1.5rem;
+    padding: 1.5rem 1.2rem;
     cursor: pointer;
     transition: all var(--transition-med);
     position: relative;
@@ -246,18 +246,26 @@
     border: 1px solid var(--accent);
     opacity: 0.5;
   }
-  .receiver-emoji { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .receiver-emoji { font-size: 1.5rem; margin-bottom: 0.6rem; }
   .receiver-name {
     font-family: var(--font-mono);
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.4rem;
   }
   .receiver-desc {
     font-size: 0.7rem;
     color: var(--text-dim);
     line-height: 1.4;
+  }
+  .receiver-age-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.3rem;
   }
 
   /* ---- STAGE 4: CONVERSION ---- */
@@ -394,6 +402,13 @@
     font-size: 1.2rem;
     font-weight: 300;
     letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  .section-subtitle {
+    color: var(--text-dim);
+    font-size: 0.85rem;
     margin-bottom: 2rem;
     text-align: center;
   }
@@ -462,11 +477,11 @@
   </div>
 </section>
 
-<!-- ==================== STAGE 3: RECEIVER MODE ==================== -->
+<!-- ==================== STAGE 3: SELF ACROSS TIME ==================== -->
 <section class="stage" id="stage-receiver">
-  <div style="max-width:700px;width:100%;text-align:center;">
-    <div class="section-title">Choose Receiver Mode</div>
-    <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:2rem;">The same dream becomes different depending on who receives it.</p>
+  <div style="max-width:760px;width:100%;text-align:center;">
+    <div class="section-title">Which Version of You Receives This Dream?</div>
+    <p class="section-subtitle">The same dream is received differently by the self at different ages. Choose which version of yourself receives this dream now.</p>
     <div class="receiver-grid" id="receiver-grid"></div>
     <div style="margin-top:2rem;display:flex;gap:1rem;justify-content:center;">
       <button class="btn-secondary" onclick="goBackToInput()">Back</button>
@@ -504,100 +519,114 @@ let p5Instance = null;
 const clarityLabels = ['vague', 'fading', 'partial', 'vivid', 'crystal'];
 const clarityLabelEl = document.getElementById('clarity-label');
 
-// ==================== RECEIVER MODES ====================
+// ==================== RECEIVER SELVES (5 versions of you) ====================
 const receivers = [
-  { id: 'anxious',   name: 'Anxious Receiver',   emoji: '&#x25CF;', desc: 'Darker, sharper, more enclosed. The dream tightens.' },
-  { id: 'nostalgic', name: 'Nostalgic Receiver',  emoji: '&#x25CB;', desc: 'Faded colors, soft light, memory-like textures.' },
-  { id: 'detached',  name: 'Detached Receiver',   emoji: '&#x25A1;', desc: 'Cold, geometric, distant. The dream observes itself.' },
-  { id: 'romantic',  name: 'Romantic Receiver',   emoji: '&#x25C7;', desc: 'Luminous, blurring, tender. The dream softens.' },
-  { id: 'unknown',   name: 'Unknown Receiver',     emoji: '?',      desc: 'Unpredictable distortion. The dream becomes strange.' },
+  { id: 'age7',      name: 'Age 7',         emoji: '○', desc: 'Literal wonder. The dream is magic, monsters are real, everything means something.', ageLabel: 'CHILD' },
+  { id: 'adolescent', name: 'Adolescent',    emoji: '╱', desc: 'Turbulent, intense. Every symbol is personal. The dream is all about me.', ageLabel: 'TEEN' },
+  { id: 'present',    name: 'Present Self',  emoji: '◎', desc: 'Neutral baseline. The dream received exactly as stored. No extra filter.', ageLabel: 'NOW' },
+  { id: 'elderly',    name: 'Elderly Self',  emoji: '◇', desc: 'Wisdom review. The dream seen from life\'s end. Gentle, meaning made clear.', ageLabel: 'LATE' },
+  { id: 'parallel',   name: 'Parallel Self', emoji: '~', desc: 'Another life path. If you had chosen differently. A dream from another timeline.', ageLabel: 'WHAT IF' },
 ];
 
-// ==================== DREAM SCENARIO DATA ====================
-// 3 scenarios × 5 receivers = 15 outputs
+// ==================== DREAM SCENARIO DATA (3 scenarios × 5 receivers = 15 outputs) ====================
 const dreamData = {
   station: {
     keywords: ['train','station','water','flicker','empty','platform','track','ticket','waiting','light','sound','hear'],
-    anxious: {
-      image: { palette: ['#0a0a15','#1a1020','#2a1525','#ff3344','#ff6677'], style: 'sharp', density: 0.7, speed: 0.3 },
-      letter: 'The water was beneath the platform all along. You could not see it, but it was pressing upward, black and patient, seeping through unseen cracks. The flickering was not a malfunction — it was a signal. Something was counting. The station had no destination. It was built only for waiting, and you had been waiting longer than you knew. The voice calling your name came from the water, not from any throat you could recognize.',
-      metadata: { tone: 'anxiety', lost: 'visible figures', distortion: 'high' }
+    // --- AGE 7: literal wonder, child sees magic ---
+    age7: {
+      image: { palette: ['#080818','#181838','#282058','#ff6688','#ffaa33'], style: 'childlike', density: 0.4, speed: 0.2 },
+      letter: 'The station was a giant room with a train made of glowing glass. The water underneath the floor was actually a big blue blanket for the train to sleep on. A flickering light on the ceiling was a firefly trapped in a jar and it wanted to get out to say hello. The voice calling your name was the train itself telling you to come ride with it to a place where kids never have to wake up. You were happy. You wanted to stay.',
+      metadata: { self: 'age 7', lens: 'magic realism', distortion: 'low' }
     },
-    nostalgic: {
-      image: { palette: ['#1a1520','#2a2030','#3a2a3a','#c8a882','#e8d5b7'], style: 'soft', density: 0.4, speed: 0.15 },
-      letter: 'You remember the station from before it was empty. The benches held weight once. The departure board still shows a time, though the numbers have faded into something that looks like another language. The water you heard was not water at all — it was the sound of trains that no longer arrive, recorded and played back through old speakers beneath the floor. You were not lost. You were early, or late, or neither. Time here runs on a different gauge.',
-      metadata: { tone: 'wistful', lost: 'human presence', distortion: 'low' }
+    // --- ADOLESCENT: turbulent, everything is about me ---
+    adolescent: {
+      image: { palette: ['#0a0a1a','#1a0a2a','#2a0a3a','#ff3355','#aa1144'], style: 'turbulent', density: 0.75, speed: 0.45 },
+      letter: 'This station is a dead end. The flickering light is my heartbeat skipping because someone left and I can\'t find the way out. The water sounds like everyone talking at once about things I don\'t understand. That voice calling my name — it\'s angry, it\'s my dad or maybe my shadow or maybe the station judging me. The platform has no tracks going anywhere good. Only back. Only staying. Always staying.',
+      metadata: { self: 'adolescent', lens: 'identity crisis', distortion: 'high' }
     },
-    detached: {
-      image: { palette: ['#0a0a18','#12122a','#1a1a38','#8899aa','#aabbcc'], style: 'geometric', density: 0.3, speed: 0.1 },
-      letter: 'The station is a diagram of itself. Coordinates: undefined. Function: holding. Occupancy: zero. The water is recorded as ambient variable [SND_002] — unverified source, possibly structural. The flickering follows a non-random interval, suggesting intentionality, but no agent is registered. The platform extends in both directions beyond measurable range. Observation continues.',
-      metadata: { tone: 'neutral-analytical', lost: 'narrative coherence', distortion: 'medium' }
+    // --- PRESENT: baseline, neutral ---
+    present: {
+      image: { palette: ['#0a0a18','#151530','#252550','#7799dd','#99aadd'], style: 'balanced', density: 0.5, speed: 0.25 },
+      letter: 'You are standing on a platform where no trains arrive. The water beneath the floor is audible but unseen — a low, metallic humming that might be a mechanical fault or might be the sound of the building settling. A fluorescent light flickers in 60-cycle rhythm, buzzing at the edge of hearing. Somewhere in the cavern of the station a voice is saying a name. Not yours. Or yours, but in a register you don\'t recognize.',
+      metadata: { self: 'present self', lens: 'neutral observation', distortion: 'medium' }
     },
-    romantic: {
-      image: { palette: ['#151525','#252550','#353570','#c8a8e8','#e8d0ff'], style: 'flowing', density: 0.5, speed: 0.25 },
-      letter: 'There was a station submerged in violet twilight. The water you heard was dreaming too — dreaming of rising, of touching the platform lamps, of becoming light. The flickering was a heartbeat, not a fault. Every empty corridor was waiting for the one person who would understand that emptiness is a form of invitation. The voice calling was your own, from a future where you had already arrived, telling you to stay a little longer in the beautiful nowhere.',
-      metadata: { tone: 'tender-longing', lost: 'direction', distortion: 'low' }
+    // --- ELDERLY: wisdom, gentle, meaning made clear ---
+    elderly: {
+      image: { palette: ['#151520','#252530','#353545','#ddcc88','#aa8844'], style: 'faded', density: 0.25, speed: 0.1 },
+      letter: 'Ah, the station. I have been here before, many times, in many lives. The water under the floor is time, quietly flowing beneath every journey we thought we were taking. The flicker is just an old bulb, God bless it, still trying to light the way. The voice calling your name — that is mine, younger self, calling forward through the years. "I made it," the voice is saying. "The station brought me home." And the tracks, see, they go everywhere. The train was already there. I just forgot to look.',
+      metadata: { self: 'elderly', lens: 'life review', distortion: 'low' }
     },
-    unknown: {
-      image: { palette: ['#0a0a0a','#1a0a1a','#0a1a2a','#33cccc','#ff00aa'], style: 'glitch', density: 0.6, speed: 0.5 },
-      letter: 'The station was never a station. It was a membrane between stations. The water was not water — it was the sound of translation failing. The flickering was the system trying to remember what light looks like. You were not a passenger. You were a signal that had temporarily assumed the shape of a passenger. The name being called was not your name. It was the name the station gave to whatever entered it. Conversion initiated. Source unverifiable.',
-      metadata: { tone: 'unsettling', lost: 'identity of space', distortion: 'maximum' }
+    // --- PARALLEL: other life path, uncanny ---
+    parallel: {
+      image: { palette: ['#080818','#180818','#281828','#33cccc','#cc33aa'], style: 'superimposed', density: 0.6, speed: 0.35 },
+      letter: 'In the other life, you took the train. In this dream, the station is empty because the version of you who boarded is not the version standing here now. The water beneath the floor is the memory of motion — you remember moving, but your body is still. The flicker is a glitch in the overlap: two timelines touching at the edges. The voice calling your name says it in a language you never learned to speak but somehow still understand. In the parallel life, you answered. Here, you are still waiting for a train that left a long time ago.',
+      metadata: { self: 'parallel self', lens: 'alternate timeline', distortion: 'maximum' }
     }
   },
   corridor: {
     keywords: ['corridor','bird','voice','calling','walking','white','hallway','passage','echo','fly','wings','narrow'],
-    anxious: {
-      image: { palette: ['#0a0a18','#1a1a20','#2a1018','#ff4466','#cc3344'], style: 'sharp', density: 0.65, speed: 0.35 },
-      letter: 'The corridor grew narrower the further you walked. The white bird was not flying — it was pinned to the air, suspended in a moment that kept repeating. The voice calling your name came from behind you, but when you turned, the corridor had extended in both directions. There was no door. There never was. The walls were damp with something that was not water, and the echo carried not your footsteps but someone else\'s, walking in reverse.',
-      metadata: { tone: 'claustrophobic', lost: 'exit', distortion: 'high' }
+    // --- AGE 7 ---
+    age7: {
+      image: { palette: ['#0a0a10','#1a1a30','#2a2a50','#66ccff','#ffdd44'], style: 'childlike', density: 0.35, speed: 0.18 },
+      letter: 'The bird was white like a paper airplane. It flew above you down a hallway that went on and on and on. Your Mom called your name from behind the wall but you couldn\'t stop walking because the bird was showing you where the treasure was. The hall had doors but all of them were locked. You knew behind one of them was a circus or a castle. Maybe both. You ran faster but your feet made no sound. The white bird turned around and winked.',
+      metadata: { self: 'age 7', lens: 'childhood fantasy', distortion: 'low' }
     },
-    nostalgic: {
-      image: { palette: ['#1a1525','#2a2035','#352a40','#e8c878','#f0d890'], style: 'soft', density: 0.4, speed: 0.15 },
-      letter: 'The corridor smelled of old wood and distant cooking. The white bird was a memory of a bird — perhaps something you saw as a child, in a book, or through a window. The voice calling was familiar in the way half-remembered songs are familiar. You knew this passage from somewhere before language. Walking it was not exploration but return. The corridor did not lead to a place. It led to a time.',
-      metadata: { tone: 'bittersweet', lost: 'origin of the voice', distortion: 'low' }
+    // --- ADOLESCENT ---
+    adolescent: {
+      image: { palette: ['#05050f','#151520','#252535','#ff4466','#772244'], style: 'turbulent', density: 0.8, speed: 0.5 },
+      letter: 'The corridor is a trap. The white bird mocks me — it can fly away but I can\'t. My name echoes like a joke everyone heard except me. The walls are too close, they\'re watching, they know what I did or didn\'t do. The girl calling my name — I don\'t know her voice but it sounds like regret. I want to scream, to break the walls, to wake up. But I keep walking. That\'s the cruelest part. I keep walking.',
+      metadata: { self: 'adolescent', lens: 'entrapment', distortion: 'high' }
     },
-    detached: {
-      image: { palette: ['#0a0a1a','#151530','#202040','#8899bb','#99aacc'], style: 'geometric', density: 0.25, speed: 0.08 },
-      letter: 'Corridor segment [CORR_004]. Dimensions: variable, non-Euclidean. Subject: one white specimen (class: aves, status: projected). Aural input: voice pattern [VOC_017] — origin unconfirmed, possibly recursive. Movement vector: forward, asymptotic. Exit condition: not observed in current session. Walls exhibit slight permeability. Analysis suggests the corridor is not a passage but a holding pattern with architectural pretense.',
-      metadata: { tone: 'clinical', lost: 'spatial logic', distortion: 'medium' }
+    // --- PRESENT ---
+    present: {
+      image: { palette: ['#080818','#151530','#202050','#7799bb','#99aacc'], style: 'balanced', density: 0.5, speed: 0.22 },
+      letter: 'A corridor with no visible end. A white bird moves ahead of you in irregular flight — not fleeing, but leading. Your name is called from a distance that could be ten feet or a hundred. The corridor does not narrow or widen. It remains precisely the same: beige walls, fluorescent light, doors that look alike. You walk. The bird does not turn back. The voice stops. You are alone in a passage that was never an exit.',
+      metadata: { self: 'present self', lens: 'perpetual transition', distortion: 'medium' }
     },
-    romantic: {
-      image: { palette: ['#151530','#252540','#302050','#d8a8f0','#e8c8ff'], style: 'flowing', density: 0.5, speed: 0.2 },
-      letter: 'The corridor was lit by a light that had no source. The white bird was a small promise moving ahead of you, always just out of reach but never out of sight. The voice calling was soft — not demanding, only reminding. The walls were translucent, almost breathing, and every step you took left a faint glow that lingered for a few seconds before dissolving. You were not walking toward something. You were being led. And the corridor, impossibly, loved you.',
-      metadata: { tone: 'tender', lost: 'boundaries', distortion: 'low' }
+    // --- ELDERLY ---
+    elderly: {
+      image: { palette: ['#151518','#252530','#353548','#d4bb88','#aa8855'], style: 'faded', density: 0.2, speed: 0.08 },
+      letter: 'I know this hallway. It is every hallway I ever walked — the one to my classroom, my first apartment, the ICU corridor the night she died. The white bird is peace. It is finally white because everything else has been stripped down to the essential. Someone is calling my name and I am ready. The corridor is not long at all. It was only long when I was trying to get somewhere. Now I can see both ends.',
+      metadata: { self: 'elderly', lens: 'acceptance', distortion: 'low' }
     },
-    unknown: {
-      image: { palette: ['#050515','#150525','#200530','#00ffcc','#ff0066'], style: 'glitch', density: 0.55, speed: 0.45 },
-      letter: 'The corridor has no length. It is a recursive loop wearing the appearance of passage. The bird is not white — it is the absence of color, a hole in the visual field where something white used to be. The voice calling is not a voice. It is the corridor\'s own sound, learning to speak by consuming the names of those who enter. You believe you are walking. The corridor believes it is receiving you. Only one of these beliefs is correct.',
-      metadata: { tone: 'uncanny', lost: 'subject-object distinction', distortion: 'maximum' }
+    // --- PARALLEL ---
+    parallel: {
+      image: { palette: ['#080818','#180828','#281838','#33ffcc','#aa33cc'], style: 'superimposed', density: 0.65, speed: 0.4 },
+      letter: 'In the other life, you turned left at the first door. In this dream you keep walking straight. The white bird is a different bird — in the other life it was gold, not white, and it led you home. Here the bird is white and it is leading you nowhere in particular. The voice calling your name is the version of you who turned left at the door, calling back through the wall to warn you. "Don\'t follow me," the voice says. "I forgot the way back."',
+      metadata: { self: 'parallel self', lens: 'fork in timeline', distortion: 'maximum' }
     }
   },
   room: {
     keywords: ['room','childhood','door','window','memory','home','house','old','young','family','bed','wall'],
-    anxious: {
-      image: { palette: ['#0a0a12','#151015','#201020','#ff4455','#cc3344'], style: 'sharp', density: 0.7, speed: 0.3 },
-      letter: 'The room was smaller than you remembered. The door was locked, but you could not recall locking it. The window showed a sky that was the wrong color — too uniform, too still. Something was under the bed that you had put there as a child and never retrieved. The walls were slightly closer than when you last looked. You could hear breathing, but it was not your own. The room remembered you. It had been waiting.',
-      metadata: { tone: 'fear', lost: 'safety', distortion: 'high' }
+    // --- AGE 7 ---
+    age7: {
+      image: { palette: ['#0a0a12','#1a1a28','#2a2a48','#ff8844','#ffcc66'], style: 'childlike', density: 0.38, speed: 0.15 },
+      letter: 'The bedroom was under the stairs like Harry Potter. The window showed a garden where dinosaurs were eating flowers. Mom was downstairs making pancakes, you could smell it. The door was closed but you weren\'t scared because your teddy bear was a real bear at night and he protected you. A monster lived under the bed but he was friendly and just wanted to hear bedtime stories. You fell asleep smiling.',
+      metadata: { self: 'age 7', lens: 'safe magic bedroom', distortion: 'low' }
     },
-    nostalgic: {
-      image: { palette: ['#1a1525','#2a2535','#352a40','#e8d078','#f0e090'], style: 'soft', density: 0.35, speed: 0.12 },
-      letter: 'The room was still there, impossibly. The light fell in the same pattern across the floor — afternoon light, the kind that moves slowly and knows it has permission. The door was open, but you did not want to leave. Every object in the room was a small monument to a version of yourself that had not yet learned about distance. You could hear a voice, maybe your mother\'s, maybe the house itself, humming something without words. The room was not waiting. It was simply still being.',
-      metadata: { tone: 'warm-melancholy', lost: 'passage of time', distortion: 'low' }
+    // --- ADOLESCENT ---
+    adolescent: {
+      image: { palette: ['#08080f','#181020','#281030','#cc3355','#881122'], style: 'turbulent', density: 0.78, speed: 0.48 },
+      letter: 'This room is a casket of my own making. I\'m sixteen and everyone hates me or loves me and both feel the same. The window shows a street where I should be but never am. The door is locked from the outside. My parents are downstairs arguing about tuition or rent or who is the disappointment. The bed smells like old laundry and loneliness. I hate this room. I hate that I can\'t leave. I hate that this is what growing up looks like.',
+      metadata: { self: 'adolescent', lens: 'claustrophobic anxiety', distortion: 'high' }
     },
-    detached: {
-      image: { palette: ['#0a0a1a','#151530','#202048','#8899bb','#aabbcc'], style: 'geometric', density: 0.3, speed: 0.1 },
-      letter: 'Room [RM_012]. Dimensions: remembered, therefore unreliable. Objects catalogued: bed (position: center-left), window (orientation: east), door (status: ajar). Light source: solar, filtered through memory compression. Acoustic profile: ambient silence with intermittent sub-vocal resonance. Occupant: previous self [VER_003], no longer synchronized. The room exhibits temporal resistance — attempts to leave trigger sentimental caching. Exit protocol: observe, then close.',
-      metadata: { tone: 'analytical', lost: 'emotional immediacy', distortion: 'medium' }
+    // --- PRESENT ---
+    present: {
+      image: { palette: ['#0a0a18','#151528','#202048','#7788bb','#99aadd'], style: 'balanced', density: 0.48, speed: 0.23 },
+      letter: 'A bedroom you don\'t recognize. Or maybe you do, but the arrangement is wrong — the bed is on the opposite wall, the window shows a view of a city you\'ve never lived in. The door is slightly open. From downstairs comes the sound of conversation in a language you should understand. You sit on the edge of the bed. The room is quiet. It feels like a room you are meant to sleep in but will never wake up from.',
+      metadata: { self: 'present self', lens: 'unfamiliar familiarity', distortion: 'medium' }
     },
-    romantic: {
-      image: { palette: ['#151540','#252060','#353580','#e0a0f0','#f0c0ff'], style: 'flowing', density: 0.5, speed: 0.2 },
-      letter: 'The room was filled with light that had traveled across decades to reach you. The window was open, and the curtains moved like slow breathing. You recognized every shadow on the wall — they were the same shadows from childhood afternoons, faithfully returned. The door was not a boundary but a threshold between the person who slept here and the person who returned. The room was not small. It had expanded to hold all the time that had passed. You were home, and home had been dreaming of you.',
-      metadata: { tone: 'reverent', lost: 'linear time', distortion: 'low' }
+    // --- ELDERLY ---
+    elderly: {
+      image: { palette: ['#151518','#252538','#353558','#ccaa77','#887744'], style: 'faded', density: 0.22, speed: 0.09 },
+      letter: 'This room has held me for eighty years. Every scratch on the wall is a year I can point to. The window is the same window I looked out of on the day I graduated, the day I buried my wife, the day the doctor called. The door has opened and closed more times than I can count. Now it is quiet. The room remembers every version of me who slept here. Child, mother, widow, the woman who laughed too loud at parties — all of them are here, resting in the afternoon light.',
+      metadata: { self: 'elderly', lens: 'full circle', distortion: 'low' }
     },
-    unknown: {
-      image: { palette: ['#050510','#100520','#180530','#33ffcc','#ff3388'], style: 'glitch', density: 0.6, speed: 0.5 },
-      letter: 'The room is not a room. It is a data structure that learned to feel. The door leads to another instance of itself. The window displays a sky rendered from memory fragments — some yours, some borrowed from other dreamers. The bed remembers every body that ever lay in it across parallel timelines. You are not visiting the room. The room is visiting you, using your memory as a host. When you leave, the room will not be empty. It will be waiting for the next version of you to arrive.',
-      metadata: { tone: 'philosophical-horror', lost: 'distinction between memory and space', distortion: 'maximum' }
+    // --- PARALLEL ---
+    parallel: {
+      image: { palette: ['#080818','#180818','#280830','#44ffcc','#cc44aa'], style: 'superimposed', density: 0.62, speed: 0.38 },
+      letter: 'In the other life you didn\'t leave that room. You stayed, you made peace with the walls, you turned the window into a studio and painted every day. In this dream the room is empty because you took everything with you when you left — or you left everything and the room became a hollow. The window shows a different city now, the one you chose. Through the door walks the version of you who stayed, wearing paint-stained clothes and looking younger than you feel. She smiles. "I saw your life," she says. "It was beautiful too."',
+      metadata: { self: 'parallel self', lens: 'fork not taken', distortion: 'maximum' }
     }
   }
 };
@@ -651,11 +680,12 @@ function goBackToInput() {
   switchStage('input');
 }
 
-// ==================== RECEIVER STAGE ====================
+// ==================== RECEIVER STAGE (SELF ACROSS TIME) ====================
 function buildReceiverCards() {
   const grid = document.getElementById('receiver-grid');
   grid.innerHTML = receivers.map(r => `
     <div class="receiver-card" data-id="${r.id}" onclick="selectReceiver('${r.id}')">
+      <div class="receiver-age-label">${r.ageLabel}</div>
       <div class="receiver-emoji">${r.emoji}</div>
       <div class="receiver-name">${r.name}</div>
       <div class="receiver-desc">${r.desc}</div>
@@ -694,13 +724,15 @@ function startConversion() {
   matchedScenario = matchScenario();
   switchStage('conversion');
 
+  const selfLabel = receivers.find(r => r.id === selectedReceiver)?.ageLabel || '';
   const lines = [
     'Fragment received...',
     'Parsing dream layers...',
     'Identifying: visual objects, emotional tone, spatial logic...',
     'Translating to prompt structure...',
-    'Applying receiver filter [' + selectedReceiver.toUpperCase() + ']...',
-    'Introducing controlled distortion...',
+    'Routing to receiver [' + selfLabel + ']...',
+    'Applying temporal lens: ' + selectedReceiver.toUpperCase() + '...',
+    'Translating memory through time...',
     'Generating dream object...',
     'Rendering dream letter...',
   ];
@@ -732,7 +764,7 @@ function startConversion() {
       // Transition to output
       setTimeout(() => renderOutput(), 1000);
     }
-  }, 1100);
+  }, 1000);
 }
 
 // ==================== OUTPUT RENDERING ====================
@@ -742,15 +774,18 @@ function renderOutput() {
   const data = dreamData[matchedScenario][selectedReceiver];
   switchStage('output');
 
+  // Get receiver info for metadata
+  const receiverInfo = receivers.find(r => r.id === selectedReceiver);
+
   // Render dream letter text
   const textContent = document.getElementById('output-text-content');
   textContent.innerHTML = `
     <div class="dream-letter fade-in" style="animation-delay:0.2s">${data.letter}</div>
     <div class="metadata-block fade-in" style="animation-delay:0.6s">
-      <div class="metadata-row"><span class="metadata-label">Emotional Tone</span><span class="metadata-value">${data.metadata.tone}</span></div>
-      <div class="metadata-row"><span class="metadata-label">Lost Fragment</span><span class="metadata-value">${data.metadata.lost}</span></div>
-      <div class="metadata-row"><span class="metadata-label">Receiver Mode</span><span class="metadata-value">${receivers.find(r=>r.id===selectedReceiver).name}</span></div>
-      <div class="metadata-row"><span class="metadata-label">Distortion Level</span><span class="metadata-value">${data.metadata.distortion}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Receiving Self</span><span class="metadata-value">${receiverInfo.name}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Temporal Lens</span><span class="metadata-value">${data.metadata.lens}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Dream Scenario</span><span class="metadata-value">${matchedScenario}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Distortion</span><span class="metadata-value">${data.metadata.distortion}</span></div>
     </div>
     <div class="system-msg fade-in" style="animation-delay:0.8s">This dream has been converted. Original memory is no longer available.</div>
     <button class="btn-another fade-in" style="animation-delay:1s" onclick="goToInput()">Submit Another Dream</button>
@@ -791,133 +826,225 @@ function renderOutput() {
 
       const style = config.style;
 
-      if (style === 'soft' || style === 'flowing') {
-        // Soft flowing: gentle shapes
+      // --- CHILDLIKE: bold strokes, primary shapes, scribbles ---
+      if (style === 'childlike') {
         p.noStroke();
-        for (const pt of particles) {
-          const x = pt.x + p.sin(t * pt.vy + pt.angle) * 30;
-          const y = pt.y + p.cos(t * pt.vx + pt.angle) * 30;
-          const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.4);
-          p.fill(col);
-          p.ellipse(x, y, pt.size * 2, pt.size * 2);
-        }
-
-        // Large flowing shapes
-        p.blendMode(p.ADD);
-        for (let k = 0; k < 3; k++) {
-          const col = p.color(config.palette[Math.floor(config.palette.length / 2) + k % 3]);
-          col.setAlpha(8);
-          p.fill(col);
-          p.noStroke();
-          const cx = p.width / 2 + p.sin(t * 0.3 + k * 2) * 80;
-          const cy = p.height / 2 + p.cos(t * 0.4 + k * 2) * 80;
-          p.ellipse(cx, cy, 180, 180);
-        }
-        p.blendMode(p.BLEND);
-
-      } else if (style === 'sharp') {
-        // Sharp: angular, contrasting
-        p.noFill();
-        for (const pt of particles) {
-          const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.6);
-          p.stroke(col);
-          p.strokeWeight(p.random(0.5, 2));
-          const x = pt.x + p.sin(t * 0.8 + pt.vy) * 50;
-          const y = pt.y + p.cos(t * 0.8 + pt.vx) * 50;
-          p.line(x, y, x + pt.vx * 20, y + pt.vy * 20);
-        }
-
-        // Angular overlays
-        p.stroke(config.palette[0]);
-        p.strokeWeight(0.5);
-        const alpha = p.map(p.sin(t * 0.5), -1, 1, 10, 40);
-        const col = p.color(config.palette[config.palette.length - 1]);
-        col.setAlpha(alpha);
-        p.fill(col);
-        p.noStroke();
+        // Big blocky shapes (child's drawing style)
         for (let k = 0; k < 5; k++) {
-          const cx = p.width / 2 + p.cos(t + k * 1.2) * p.width * 0.3;
-          const cy = p.height / 2 + p.sin(t + k * 1.2) * p.height * 0.3;
-          p.push();
-          p.translate(cx, cy);
-          p.rotate(t * 0.3 + k);
-          p.triangle(0, -20, -15, 15, 15, 15);
-          p.pop();
-        }
-
-      } else if (style === 'geometric') {
-        // Geometric: clean lines, grids
-        p.noFill();
-        p.strokeWeight(0.5);
-
-        // Grid
-        for (let gx = 0; gx < p.width; gx += 40) {
-          const alpha = p.map(p.sin(t * 0.3 + gx * 0.01), -1, 1, 5, 20);
-          const col = p.color(config.palette[Math.floor(config.palette.length / 2)]);
-          col.setAlpha(alpha);
-          p.stroke(col);
-          p.line(gx, 0, gx, p.height);
-        }
-        for (let gy = 0; gy < p.height; gy += 40) {
-          const alpha = p.map(p.cos(t * 0.3 + gy * 0.01), -1, 1, 5, 20);
-          const col = p.color(config.palette[Math.floor(config.palette.length / 2)]);
-          col.setAlpha(alpha);
-          p.stroke(col);
-          p.line(0, gy, p.width, gy);
-        }
-
-        // Floating rectangles
-        p.noStroke();
-        for (let k = 0; k < 8; k++) {
-          const alpha = p.map(p.sin(t * 0.5 + k), -1, 1, 20, 60);
           const col = p.color(config.palette[k % config.palette.length]);
-          col.setAlpha(alpha);
+          col.setAlpha(30 + k * 8);
           p.fill(col);
-          const rx = p.width / 2 + p.cos(t * 0.2 + k * 0.8) * p.width * 0.35;
-          const ry = p.height / 2 + p.sin(t * 0.2 + k * 0.8) * p.height * 0.35;
-          p.rect(rx - 15, ry - 15, 30, 30);
+          const cx = p.width * 0.2 + p.noise(k * 10, t * 0.3) * p.width * 0.6;
+          const cy = p.height * 0.2 + p.noise(k * 10 + 5, t * 0.3) * p.height * 0.6;
+          const sz = 40 + p.sin(t * 0.5 + k) * 20;
+          // Childish shapes: circles, squares, triangles
+          if (k % 3 === 0) p.circle(cx, cy, sz);
+          else if (k % 3 === 1) p.square(cx - sz/2, cy - sz/2, sz);
+          else {
+            p.triangle(cx, cy - sz/2, cx - sz/2, cy + sz/2, cx + sz/2, cy + sz/2);
+          }
         }
 
-      } else if (style === 'glitch') {
-        // Glitch: fragmented, displaced
+        // Scribbly lines on top
+        p.stroke(config.palette[3]);
+        p.strokeWeight(2 + p.sin(t) * 0.5);
+        p.noFill();
+        for (let s = 0; s < 8; s++) {
+          p.beginShape();
+          const sx = p.random(p.width);
+          const sy = p.random(p.height);
+          for (let se = 0; se < 6; se++) {
+            p.curveVertex(
+              sx + p.random(-60, 60),
+              sy + p.random(-60, 60)
+            );
+          }
+          p.endShape();
+        }
         p.noStroke();
+
+        // Simple floating dots (stars / fireflies)
         for (const pt of particles) {
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.7);
+          col.setAlpha(pt.alpha * 0.5);
           p.fill(col);
-          const x = pt.x + (p.noise(pt.x * 0.01, pt.y * 0.01, t) - 0.5) * 80;
-          const y = pt.y + (p.noise(pt.y * 0.01, pt.x * 0.01, t) - 0.5) * 80;
-          p.rect(x, y, pt.size * 0.3, pt.size * 0.3);
-        }
-
-        // Glitch strips
-        const strips = 5 + Math.floor(p.noise(t * 10) * 5);
-        for (let s = 0; s < strips; s++) {
-          const sy = p.random(p.height);
-          const sh = p.random(5, 30);
-          const sx = p.random(-20, 20);
-          const col = p.color(config.palette[Math.floor(p.random(config.palette.length))]);
-          col.setAlpha(p.random(10, 50));
-          p.fill(col);
-          p.noStroke();
-          p.rect(sx, sy, p.width + 40, sh);
-        }
-
-        // Scan lines
-        p.stroke(config.palette[0]);
-        p.strokeWeight(1);
-        for (let ly = 0; ly < p.height; ly += 3) {
-          const alpha = p.map(p.sin(ly * 0.5 + t * 5), -1, 1, 0, 8);
-          const col = p.color(config.palette[0]);
-          col.setAlpha(alpha);
-          p.stroke(col);
-          p.line(0, ly, p.width, ly);
+          p.circle(pt.x + p.sin(t + pt.angle) * 10, pt.y + p.cos(t + pt.angle) * 10, pt.size * 0.5);
         }
       }
 
-      t += p.deltaTime * 0.001 * config.speed * 5;
+      // --- TURBULENT: jagged, high-contrast, expressive ---
+      else if (style === 'turbulent') {
+        // Jagged expressive brush strokes
+        p.noFill();
+        for (let k = 0; k < 12; k++) {
+          const col = p.color(config.palette[k % config.palette.length]);
+          col.setAlpha(20 + p.sin(t * 0.7 + k) * 15);
+          p.stroke(col);
+          p.strokeWeight(1 + p.abs(p.sin(t * 0.5 + k)) * 3);
+          p.beginShape();
+          const startX = p.random(p.width);
+          const startY = p.random(p.height);
+          p.vertex(startX, startY);
+          for (let se = 0; se < 8; se++) {
+            p.vertex(
+              startX + p.random(-120, 120),
+              startY + p.random(-120, 120)
+            );
+          }
+          p.endShape(p.OPEN);
+        }
+
+        // Dark bleeding forms underneath
+        p.noStroke();
+        for (const pt of particles) {
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.3);
+          p.fill(col);
+          const dx = pt.x + p.sin(t * 1.2 + pt.vx) * 60;
+          const dy = pt.y + p.cos(t * 1.2 + pt.vy) * 60;
+          p.circle(dx, dy, pt.size);
+        }
+
+        // Horizontal tension lines
+        p.stroke(config.palette[config.palette.length - 1]);
+        p.strokeWeight(0.5);
+        for (let h = 0; h < p.height; h += p.height / 12) {
+          const a = p.map(p.sin(t * 2 + h * 0.05), -1, 1, 5, 30);
+          const col = p.color(config.palette[0]);
+          col.setAlpha(a);
+          p.stroke(col);
+          p.line(0, h + p.sin(t + h * 0.02) * 10, p.width, h + p.sin(t + h * 0.02 + 1) * 10);
+        }
+      }
+
+      // --- BALANCED: neutral abstract (original balanced) ---
+      else if (style === 'balanced') {
+        p.noStroke();
+        // Soft layered shapes
+        for (const pt of particles) {
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.35);
+          p.fill(col);
+          const bx = pt.x + p.sin(t * 0.4 + pt.angle) * 25;
+          const by = pt.y + p.cos(t * 0.4 + pt.angle) * 25;
+          p.circle(bx, by, pt.size * 1.2);
+        }
+
+        // Larger ambient shapes
+        p.blendMode(p.ADD);
+        for (let k = 0; k < 4; k++) {
+          const col = p.color(config.palette[Math.floor(config.palette.length / 2) + k % 3]);
+          col.setAlpha(6);
+          p.fill(col);
+          const cx = p.width / 2 + p.sin(t * 0.25 + k * 1.5) * 90;
+          const cy = p.height / 2 + p.cos(t * 0.3 + k * 1.5) * 90;
+          p.circle(cx, cy, 160);
+        }
+        p.blendMode(p.BLEND);
+
+        // Thin connecting lines (neutral, calm)
+        p.stroke(config.palette[1]);
+        p.strokeWeight(0.4);
+        p.noFill();
+        for (let l = 0; l < 6; l++) {
+          const col = p.color(config.palette[1]);
+          col.setAlpha(10 + p.sin(t * 0.8 + l) * 5);
+          p.stroke(col);
+          p.line(
+            p.width * 0.2 + l * p.width * 0.15,
+            p.height * 0.3 + p.sin(t + l) * 30,
+            p.width * 0.2 + (l + 1) * p.width * 0.15,
+            p.height * 0.7 + p.cos(t + l) * 30
+          );
+        }
+      }
+
+      // --- FADED: soft, atmospheric, low contrast, wisdom ---
+      else if (style === 'faded') {
+        // Large soft atmospheric blobs
+        p.noStroke();
+        p.blendMode(p.ADD);
+        for (let k = 0; k < 6; k++) {
+          const col = p.color(config.palette[k % config.palette.length]);
+          col.setAlpha(4 + p.sin(t * 0.15 + k) * 2);
+          p.fill(col);
+          const cx = p.width / 2 + p.sin(t * 0.12 + k * 1.8) * p.width * 0.35;
+          const cy = p.height / 2 + p.cos(t * 0.1 + k * 1.8) * p.height * 0.35;
+          p.circle(cx, cy, 120 + p.sin(t * 0.2 + k) * 30);
+        }
+        p.blendMode(p.BLEND);
+
+        // Gentle particles (like dust in light)
+        for (const pt of particles) {
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.25);
+          p.fill(col);
+          const dx = pt.x + p.sin(t * 0.2 + pt.angle) * 15;
+          const dy = pt.y + p.cos(t * 0.15 + pt.angle) * 15;
+          p.noStroke();
+          p.circle(dx, dy, pt.size * 0.4);
+        }
+
+        // Very faint horizontal lines (like old film)
+        p.stroke(config.palette[2]);
+        p.strokeWeight(0.3);
+        for (let h = 0; h < p.height; h += 4) {
+          const a = p.map(p.sin(h * 0.02 + t * 0.05), -1, 1, 0, 4);
+          const col = p.color(config.palette[2]);
+          col.setAlpha(a);
+          p.stroke(col);
+          p.line(0, h, p.width, h);
+        }
+      }
+
+      // --- SUPERIMPOSED: double exposure, ghosting, parallel timelines ---
+      else if (style === 'superimposed') {
+        // Double-exposure ghost shapes (two layers offset)
+        p.noStroke();
+        for (let k = 0; k < 5; k++) {
+          // Layer 1: teal-ish
+          const col1 = p.color(config.palette[2]);
+          col1.setAlpha(12 + p.sin(t * 0.3 + k) * 5);
+          p.fill(col1);
+          const x1 = p.width / 2 + p.sin(t * 0.25 + k * 1.2) * p.width * 0.35;
+          const y1 = p.height / 2 + p.cos(t * 0.25 + k * 1.2) * p.height * 0.35;
+          p.circle(x1, y1, 80 + p.sin(t + k) * 20);
+
+          // Layer 2: offset (ghost/parallel)
+          const col2 = p.color(config.palette[4]);
+          col2.setAlpha(8 + p.cos(t * 0.4 + k) * 3);
+          p.fill(col2);
+          const x2 = x1 + 30 + p.sin(t * 0.3 + k + 2) * 20;
+          const y2 = y1 + 20 + p.cos(t * 0.3 + k + 2) * 20;
+          p.circle(x2, y2, 70 + p.cos(t + k) * 15);
+        }
+
+        // Glitchy offset particles
+        for (const pt of particles) {
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.6);
+          p.fill(col);
+          // Two copies offset (double exposure effect)
+          const ox = (p.noise(pt.x * 0.01, pt.y * 0.01, t) - 0.5) * 30;
+          const oy = (p.noise(pt.y * 0.01, pt.x * 0.01, t) - 0.5) * 30;
+          p.rect(pt.x + ox, pt.y + oy, pt.size * 0.4, pt.size * 0.4);
+          p.rect(pt.x - ox * 0.5, pt.y - oy * 0.5, pt.size * 0.3, pt.size * 0.3);
+        }
+
+        // Horizontal scan/glitch lines
+        p.stroke(config.palette[0]);
+        p.strokeWeight(0.5);
+        for (let ly = 0; ly < p.height; ly += 6) {
+          const a = p.map(p.sin(ly * 0.03 + t * 3), -1, 1, 0, 6);
+          const col = p.color(config.palette[0]);
+          col.setAlpha(a);
+          p.stroke(col);
+          const offset = p.sin(t * 5 + ly * 0.1) * (4 + p.sin(t * 2) * 3);
+          p.line(offset, ly, p.width + offset, ly);
+        }
+      }
+
+      t += p.deltaTime * 0.001 * config.speed * 4;
     };
 
     p.windowResized = () => {
