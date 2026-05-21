@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dream Conversion Station</title>
+<style>
+  :root {
+    --bg: #08080f;
+    --bg-card: rgba(20, 20, 40, 0.6);
+    --text: #d0d0e0;
+    --text-dim: #6a6a8a;
+    --accent: #7b8cff;
+    --accent-dim: #4a5599;
+    --border: rgba(120, 130, 200, 0.15);
+    --glass: rgba(15, 15, 35, 0.7);
+    --error: #ff6b7a;
+    --warn: #ffb86c;
+    --success: #5af78e;
+    --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --transition-slow: 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-med: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-fast: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Background ambient */
+  .bg-ambient {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 50%, rgba(80, 80, 180, 0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 20%, rgba(120, 110, 160, 0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 50% 80%, rgba(60, 70, 130, 0.04) 0%, transparent 70%);
+  }
+
+  /* Stage containers */
+  .stage {
+    position: fixed; inset: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity var(--transition-slow), visibility var(--transition-slow);
+    padding: 2rem;
+  }
+  .stage.active {
+    opacity: 1; visibility: visible;
+  }
+
+  /* ---- STAGE 1: LANDING ---- */
+  .landing-content {
+    text-align: center; max-width: 640px;
+  }
+  .landing-title {
+    font-family: var(--font-mono);
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    margin-bottom: 2rem;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all var(--transition-slow) 0.2s;
+  }
+  .stage.active .landing-title { opacity: 1; transform: translateY(0); }
+
+  .landing-subtitle {
+    font-size: 1rem;
+    color: var(--text-dim);
+    margin-bottom: 3rem;
+    font-style: italic;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all var(--transition-slow) 0.6s;
+    line-height: 1.7;
+  }
+  .stage.active .landing-subtitle { opacity: 1; transform: translateY(0); }
+
+  .btn-enter {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 1rem 2.5rem;
+    cursor: pointer;
+    transition: all var(--transition-med);
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  .stage.active .btn-enter {
+    opacity: 1; transform: translateY(0);
+    transition: all var(--transition-slow) 1s;
+  }
+  .btn-enter:hover {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+    box-shadow: 0 0 30px rgba(120, 130, 200, 0.1);
+  }
+
+  /* ---- STAGE 2: INPUT FORM ---- */
+  .card {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 2.5rem;
+    max-width: 560px;
+    width: 100%;
+  }
+  .card-title {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  .form-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+  }
+  .form-input, .form-textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.75rem 1rem;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    border-radius: 1px;
+    transition: border-color var(--transition-fast);
+    resize: vertical;
+  }
+  .form-input:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 15px rgba(120, 130, 200, 0.05);
+  }
+  .form-textarea { min-height: 80px; }
+  .form-input::placeholder, .form-textarea::placeholder { color: rgba(200,200,220,0.2); }
+
+  .slider-group { display: flex; align-items: center; gap: 1rem; }
+  .slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 1px;
+    background: var(--border);
+    outline: none;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+  .slider::-webkit-slider-thumb:hover { background: var(--accent); }
+  .slider-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    min-width: 60px;
+    text-align: right;
+  }
+  .btn-row { display: flex; gap: 1rem; margin-top: 2rem; }
+  .btn-primary, .btn-secondary {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.8rem 2rem;
+    border-radius: 1px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex: 1;
+    text-align: center;
+  }
+  .btn-primary {
+    background: var(--accent-dim);
+    color: var(--text);
+    border: none;
+  }
+  .btn-primary:hover { background: var(--accent); }
+  .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent-dim); color: var(--text); }
+
+  /* ---- STAGE 3: RECEIVER MODE ---- */
+  .receiver-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    max-width: 700px;
+    width: 100%;
+  }
+  .receiver-card {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all var(--transition-med);
+    position: relative;
+    text-align: center;
+  }
+  .receiver-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-2px);
+  }
+  .receiver-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(120, 130, 200, 0.08);
+  }
+  .receiver-card.selected::after {
+    content: '';
+    position: absolute; inset: -1px;
+    border: 1px solid var(--accent);
+    opacity: 0.5;
+  }
+  .receiver-emoji { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .receiver-name {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+  }
+  .receiver-desc {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  /* ---- STAGE 4: CONVERSION ---- */
+  .conversion-content {
+    max-width: 500px; width: 100%;
+    font-family: var(--font-mono);
+  }
+  .conversion-line {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.6s ease;
+  }
+  .conversion-line.visible {
+    opacity: 1; transform: translateX(0);
+  }
+  .conversion-line.done { color: var(--text); }
+  .conversion-cursor {
+    display: inline-block;
+    width: 8px; height: 1rem;
+    background: var(--accent);
+    animation: blink 0.8s infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  .progress-bar {
+    margin-top: 2rem;
+    height: 1px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent-dim);
+    width: 0%;
+    transition: width 0.5s ease;
+  }
+
+  /* ---- STAGE 5: OUTPUT ---- */
+  .output-container {
+    max-width: 800px; width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+  @media (max-width: 700px) { .output-container { grid-template-columns: 1fr; } }
+
+  .output-image-wrapper {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    aspect-ratio: 1;
+    overflow: hidden;
+    position: relative;
+  }
+  .output-image-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .output-text {
+    display: flex; flex-direction: column; gap: 1.5rem;
+  }
+  .dream-letter {
+    font-style: italic;
+    line-height: 1.8;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  .metadata-block {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 0;
+  }
+  .metadata-row {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.3rem 0;
+  }
+  .metadata-label { color: var(--text-dim); }
+  .metadata-value { color: var(--text); text-align: right; }
+
+  .system-msg {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--accent-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.6;
+  }
+
+  .btn-another {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 0.8rem 1.5rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    align-self: flex-start;
+  }
+  .btn-another:hover { border-color: var(--accent-dim); color: var(--text); }
+
+  /* Shared transitions */
+  .fade-in { animation: fadeIn var(--transition-slow) forwards; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .stage-header {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    position: fixed;
+    top: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    opacity: 0.5;
+  }
+
+  .section-title {
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  /* Validation */
+  .validation-msg {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--error);
+    margin-top: 0.3rem;
+    display: none;
+  }
+  .validation-msg.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="bg-ambient"></div>
+<div class="stage-header">DREAM CONVERSION STATION</div>
+
+<!-- ==================== STAGE 1: LANDING ==================== -->
+<section class="stage active" id="stage-landing">
+  <div class="landing-content">
+    <h1 class="landing-title">Dream Conversion<br>Station</h1>
+    <p class="landing-subtitle">
+      Dreams cannot be transmitted.<br>They can only be converted.
+    </p>
+    <button class="btn-enter" onclick="goToInput()">Enter the Station</button>
+  </div>
+</section>
+
+<!-- ==================== STAGE 2: INPUT FORM ==================== -->
+<section class="stage" id="stage-input">
+  <div class="card">
+    <div class="card-title">Submit Dream Fragment</div>
+    <div class="form-group">
+      <label class="form-label" for="in-see">What did you see?</label>
+      <textarea class="form-textarea" id="in-see" placeholder="Objects, people, symbols, colors..." oninput="checkInput()"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="in-feel">What did you feel?</label>
+      <input class="form-input" id="in-feel" placeholder="Emotion, atmosphere, bodily sensation..." oninput="checkInput()">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="in-space">What kind of space was it?</label>
+      <input class="form-input" id="in-space" placeholder="Indoor, outdoor, vast, enclosed, familiar, alien..." oninput="checkInput()">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="in-sound">Was there any sound or voice?</label>
+      <input class="form-input" id="in-sound" placeholder="Silence, noise, music, voices, footsteps..." oninput="checkInput()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Memory Clarity</label>
+      <div class="slider-group">
+        <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);min-width:35px;">VAGUE</span>
+        <input type="range" class="slider" id="in-clarity" min="1" max="5" value="3" oninput="updateClarity()">
+        <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);min-width:35px;">VIVID</span>
+        <span class="slider-label" id="clarity-label">partial</span>
+      </div>
+    </div>
+    <div class="validation-msg" id="validation-msg">Please fill in at least the first field to continue.</div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="goToLanding()">Back</button>
+      <button class="btn-primary" id="btn-submit" onclick="submitDream()" disabled>Submit Dream Fragment</button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== STAGE 3: RECEIVER MODE ==================== -->
+<section class="stage" id="stage-receiver">
+  <div style="max-width:700px;width:100%;text-align:center;">
+    <div class="section-title">Choose Receiver Mode</div>
+    <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:2rem;">The same dream becomes different depending on who receives it.</p>
+    <div class="receiver-grid" id="receiver-grid"></div>
+    <div style="margin-top:2rem;display:flex;gap:1rem;justify-content:center;">
+      <button class="btn-secondary" onclick="goBackToInput()">Back</button>
+      <button class="btn-primary" id="btn-convert" onclick="startConversion()" disabled>Begin Conversion</button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== STAGE 4: CONVERSION ==================== -->
+<section class="stage" id="stage-conversion">
+  <div class="conversion-content">
+    <div id="conversion-lines"></div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+</section>
+
+<!-- ==================== STAGE 5: OUTPUT ==================== -->
+<section class="stage" id="stage-output">
+  <div class="output-container">
+    <div class="output-image-wrapper" id="output-canvas-wrapper"></div>
+    <div class="output-text" id="output-text-content"></div>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>
+// ==================== STATE ====================
+let currentStage = 'landing';
+let dreamInput = null;
+let selectedReceiver = null;
+let matchedScenario = null;
+let p5Instance = null;
+
+// Clarity labels
+const clarityLabels = ['vague', 'fading', 'partial', 'vivid', 'crystal'];
+const clarityLabelEl = document.getElementById('clarity-label');
+
+// ==================== RECEIVER MODES ====================
+const receivers = [
+  { id: 'anxious',   name: 'Anxious Receiver',   emoji: '&#x25CF;', desc: 'Darker, sharper, more enclosed. The dream tightens.' },
+  { id: 'nostalgic', name: 'Nostalgic Receiver',  emoji: '&#x25CB;', desc: 'Faded colors, soft light, memory-like textures.' },
+  { id: 'detached',  name: 'Detached Receiver',   emoji: '&#x25A1;', desc: 'Cold, geometric, distant. The dream observes itself.' },
+  { id: 'romantic',  name: 'Romantic Receiver',   emoji: '&#x25C7;', desc: 'Luminous, blurring, tender. The dream softens.' },
+  { id: 'unknown',   name: 'Unknown Receiver',     emoji: '?',      desc: 'Unpredictable distortion. The dream becomes strange.' },
+];
+
+// ==================== DREAM SCENARIO DATA ====================
+// 3 scenarios × 5 receivers = 15 outputs
+const dreamData = {
+  station: {
+    keywords: ['train','station','water','flicker','empty','platform','track','ticket','waiting','light','sound','hear'],
+    anxious: {
+      image: { palette: ['#0a0a15','#1a1020','#2a1525','#ff3344','#ff6677'], style: 'sharp', density: 0.7, speed: 0.3 },
+      letter: 'The water was beneath the platform all along. You could not see it, but it was pressing upward, black and patient, seeping through unseen cracks. The flickering was not a malfunction — it was a signal. Something was counting. The station had no destination. It was built only for waiting, and you had been waiting longer than you knew. The voice calling your name came from the water, not from any throat you could recognize.',
+      metadata: { tone: 'anxiety', lost: 'visible figures', distortion: 'high' }
+    },
+    nostalgic: {
+      image: { palette: ['#1a1520','#2a2030','#3a2a3a','#c8a882','#e8d5b7'], style: 'soft', density: 0.4, speed: 0.15 },
+      letter: 'You remember the station from before it was empty. The benches held weight once. The departure board still shows a time, though the numbers have faded into something that looks like another language. The water you heard was not water at all — it was the sound of trains that no longer arrive, recorded and played back through old speakers beneath the floor. You were not lost. You were early, or late, or neither. Time here runs on a different gauge.',
+      metadata: { tone: 'wistful', lost: 'human presence', distortion: 'low' }
+    },
+    detached: {
+      image: { palette: ['#0a0a18','#12122a','#1a1a38','#8899aa','#aabbcc'], style: 'geometric', density: 0.3, speed: 0.1 },
+      letter: 'The station is a diagram of itself. Coordinates: undefined. Function: holding. Occupancy: zero. The water is recorded as ambient variable [SND_002] — unverified source, possibly structural. The flickering follows a non-random interval, suggesting intentionality, but no agent is registered. The platform extends in both directions beyond measurable range. Observation continues.',
+      metadata: { tone: 'neutral-analytical', lost: 'narrative coherence', distortion: 'medium' }
+    },
+    romantic: {
+      image: { palette: ['#151525','#252550','#353570','#c8a8e8','#e8d0ff'], style: 'flowing', density: 0.5, speed: 0.25 },
+      letter: 'There was a station submerged in violet twilight. The water you heard was dreaming too — dreaming of rising, of touching the platform lamps, of becoming light. The flickering was a heartbeat, not a fault. Every empty corridor was waiting for the one person who would understand that emptiness is a form of invitation. The voice calling was your own, from a future where you had already arrived, telling you to stay a little longer in the beautiful nowhere.',
+      metadata: { tone: 'tender-longing', lost: 'direction', distortion: 'low' }
+    },
+    unknown: {
+      image: { palette: ['#0a0a0a','#1a0a1a','#0a1a2a','#33cccc','#ff00aa'], style: 'glitch', density: 0.6, speed: 0.5 },
+      letter: 'The station was never a station. It was a membrane between stations. The water was not water — it was the sound of translation failing. The flickering was the system trying to remember what light looks like. You were not a passenger. You were a signal that had temporarily assumed the shape of a passenger. The name being called was not your name. It was the name the station gave to whatever entered it. Conversion initiated. Source unverifiable.',
+      metadata: { tone: 'unsettling', lost: 'identity of space', distortion: 'maximum' }
+    }
+  },
+  corridor: {
+    keywords: ['corridor','bird','voice','calling','walking','white','hallway','passage','echo','fly','wings','narrow'],
+    anxious: {
+      image: { palette: ['#0a0a18','#1a1a20','#2a1018','#ff4466','#cc3344'], style: 'sharp', density: 0.65, speed: 0.35 },
+      letter: 'The corridor grew narrower the further you walked. The white bird was not flying — it was pinned to the air, suspended in a moment that kept repeating. The voice calling your name came from behind you, but when you turned, the corridor had extended in both directions. There was no door. There never was. The walls were damp with something that was not water, and the echo carried not your footsteps but someone else\'s, walking in reverse.',
+      metadata: { tone: 'claustrophobic', lost: 'exit', distortion: 'high' }
+    },
+    nostalgic: {
+      image: { palette: ['#1a1525','#2a2035','#352a40','#e8c878','#f0d890'], style: 'soft', density: 0.4, speed: 0.15 },
+      letter: 'The corridor smelled of old wood and distant cooking. The white bird was a memory of a bird — perhaps something you saw as a child, in a book, or through a window. The voice calling was familiar in the way half-remembered songs are familiar. You knew this passage from somewhere before language. Walking it was not exploration but return. The corridor did not lead to a place. It led to a time.',
+      metadata: { tone: 'bittersweet', lost: 'origin of the voice', distortion: 'low' }
+    },
+    detached: {
+      image: { palette: ['#0a0a1a','#151530','#202040','#8899bb','#99aacc'], style: 'geometric', density: 0.25, speed: 0.08 },
+      letter: 'Corridor segment [CORR_004]. Dimensions: variable, non-Euclidean. Subject: one white specimen (class: aves, status: projected). Aural input: voice pattern [VOC_017] — origin unconfirmed, possibly recursive. Movement vector: forward, asymptotic. Exit condition: not observed in current session. Walls exhibit slight permeability. Analysis suggests the corridor is not a passage but a holding pattern with architectural pretense.',
+      metadata: { tone: 'clinical', lost: 'spatial logic', distortion: 'medium' }
+    },
+    romantic: {
+      image: { palette: ['#151530','#252540','#302050','#d8a8f0','#e8c8ff'], style: 'flowing', density: 0.5, speed: 0.2 },
+      letter: 'The corridor was lit by a light that had no source. The white bird was a small promise moving ahead of you, always just out of reach but never out of sight. The voice calling was soft — not demanding, only reminding. The walls were translucent, almost breathing, and every step you took left a faint glow that lingered for a few seconds before dissolving. You were not walking toward something. You were being led. And the corridor, impossibly, loved you.',
+      metadata: { tone: 'tender', lost: 'boundaries', distortion: 'low' }
+    },
+    unknown: {
+      image: { palette: ['#050515','#150525','#200530','#00ffcc','#ff0066'], style: 'glitch', density: 0.55, speed: 0.45 },
+      letter: 'The corridor has no length. It is a recursive loop wearing the appearance of passage. The bird is not white — it is the absence of color, a hole in the visual field where something white used to be. The voice calling is not a voice. It is the corridor\'s own sound, learning to speak by consuming the names of those who enter. You believe you are walking. The corridor believes it is receiving you. Only one of these beliefs is correct.',
+      metadata: { tone: 'uncanny', lost: 'subject-object distinction', distortion: 'maximum' }
+    }
+  },
+  room: {
+    keywords: ['room','childhood','door','window','memory','home','house','old','young','family','bed','wall'],
+    anxious: {
+      image: { palette: ['#0a0a12','#151015','#201020','#ff4455','#cc3344'], style: 'sharp', density: 0.7, speed: 0.3 },
+      letter: 'The room was smaller than you remembered. The door was locked, but you could not recall locking it. The window showed a sky that was the wrong color — too uniform, too still. Something was under the bed that you had put there as a child and never retrieved. The walls were slightly closer than when you last looked. You could hear breathing, but it was not your own. The room remembered you. It had been waiting.',
+      metadata: { tone: 'fear', lost: 'safety', distortion: 'high' }
+    },
+    nostalgic: {
+      image: { palette: ['#1a1525','#2a2535','#352a40','#e8d078','#f0e090'], style: 'soft', density: 0.35, speed: 0.12 },
+      letter: 'The room was still there, impossibly. The light fell in the same pattern across the floor — afternoon light, the kind that moves slowly and knows it has permission. The door was open, but you did not want to leave. Every object in the room was a small monument to a version of yourself that had not yet learned about distance. You could hear a voice, maybe your mother\'s, maybe the house itself, humming something without words. The room was not waiting. It was simply still being.',
+      metadata: { tone: 'warm-melancholy', lost: 'passage of time', distortion: 'low' }
+    },
+    detached: {
+      image: { palette: ['#0a0a1a','#151530','#202048','#8899bb','#aabbcc'], style: 'geometric', density: 0.3, speed: 0.1 },
+      letter: 'Room [RM_012]. Dimensions: remembered, therefore unreliable. Objects catalogued: bed (position: center-left), window (orientation: east), door (status: ajar). Light source: solar, filtered through memory compression. Acoustic profile: ambient silence with intermittent sub-vocal resonance. Occupant: previous self [VER_003], no longer synchronized. The room exhibits temporal resistance — attempts to leave trigger sentimental caching. Exit protocol: observe, then close.',
+      metadata: { tone: 'analytical', lost: 'emotional immediacy', distortion: 'medium' }
+    },
+    romantic: {
+      image: { palette: ['#151540','#252060','#353580','#e0a0f0','#f0c0ff'], style: 'flowing', density: 0.5, speed: 0.2 },
+      letter: 'The room was filled with light that had traveled across decades to reach you. The window was open, and the curtains moved like slow breathing. You recognized every shadow on the wall — they were the same shadows from childhood afternoons, faithfully returned. The door was not a boundary but a threshold between the person who slept here and the person who returned. The room was not small. It had expanded to hold all the time that had passed. You were home, and home had been dreaming of you.',
+      metadata: { tone: 'reverent', lost: 'linear time', distortion: 'low' }
+    },
+    unknown: {
+      image: { palette: ['#050510','#100520','#180530','#33ffcc','#ff3388'], style: 'glitch', density: 0.6, speed: 0.5 },
+      letter: 'The room is not a room. It is a data structure that learned to feel. The door leads to another instance of itself. The window displays a sky rendered from memory fragments — some yours, some borrowed from other dreamers. The bed remembers every body that ever lay in it across parallel timelines. You are not visiting the room. The room is visiting you, using your memory as a host. When you leave, the room will not be empty. It will be waiting for the next version of you to arrive.',
+      metadata: { tone: 'philosophical-horror', lost: 'distinction between memory and space', distortion: 'maximum' }
+    }
+  }
+};
+
+// ==================== STAGE NAVIGATION ====================
+function switchStage(targetId) {
+  document.querySelectorAll('.stage').forEach(el => el.classList.remove('active'));
+  document.getElementById('stage-' + targetId).classList.add('active');
+  currentStage = targetId;
+
+  // Update header opacity
+  const header = document.querySelector('.stage-header');
+  header.style.opacity = targetId === 'landing' ? '0.3' : '0.4';
+}
+
+// ==================== INPUT STAGE ====================
+function checkInput() {
+  const see = document.getElementById('in-see').value.trim();
+  document.getElementById('btn-submit').disabled = see.length === 0;
+  document.getElementById('validation-msg').classList.toggle('show', see.length === 0);
+}
+
+function updateClarity() {
+  const val = parseInt(document.getElementById('in-clarity').value);
+  document.getElementById('clarity-label').textContent = clarityLabels[val - 1];
+}
+
+function goToLanding() { switchStage('landing'); }
+function goToInput() { switchStage('input'); }
+
+function submitDream() {
+  const see = document.getElementById('in-see').value.trim();
+  if (!see) return;
+
+  dreamInput = {
+    see: see,
+    feel: document.getElementById('in-feel').value.trim(),
+    space: document.getElementById('in-space').value.trim(),
+    sound: document.getElementById('in-sound').value.trim(),
+    clarity: parseInt(document.getElementById('in-clarity').value),
+  };
+
+  // Build receiver cards and switch
+  buildReceiverCards();
+  switchStage('receiver');
+  document.getElementById('btn-convert').disabled = true;
+  selectedReceiver = null;
+}
+
+function goBackToInput() {
+  switchStage('input');
+}
+
+// ==================== RECEIVER STAGE ====================
+function buildReceiverCards() {
+  const grid = document.getElementById('receiver-grid');
+  grid.innerHTML = receivers.map(r => `
+    <div class="receiver-card" data-id="${r.id}" onclick="selectReceiver('${r.id}')">
+      <div class="receiver-emoji">${r.emoji}</div>
+      <div class="receiver-name">${r.name}</div>
+      <div class="receiver-desc">${r.desc}</div>
+    </div>
+  `).join('');
+}
+
+function selectReceiver(id) {
+  selectedReceiver = id;
+  document.querySelectorAll('.receiver-card').forEach(el => el.classList.remove('selected'));
+  document.querySelector(`.receiver-card[data-id="${id}"]`).classList.add('selected');
+  document.getElementById('btn-convert').disabled = false;
+}
+
+// ==================== SCENARIO MATCHING ====================
+function matchScenario() {
+  if (!dreamInput) return 'station';
+  const text = (dreamInput.see + ' ' + dreamInput.feel + ' ' + dreamInput.space + ' ' + dreamInput.sound).toLowerCase();
+
+  const scores = {};
+  for (const [key, scenario] of Object.entries(dreamData)) {
+    scores[key] = 0;
+    for (const kw of scenario.keywords) {
+      if (text.includes(kw)) scores[key] += 1;
+    }
+  }
+
+  // Pick highest score, default to 'station'
+  const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  return best[1] > 0 ? best[0] : 'station';
+}
+
+// ==================== CONVERSION ANIMATION ====================
+function startConversion() {
+  if (!selectedReceiver) return;
+  matchedScenario = matchScenario();
+  switchStage('conversion');
+
+  const lines = [
+    'Fragment received...',
+    'Parsing dream layers...',
+    'Identifying: visual objects, emotional tone, spatial logic...',
+    'Translating to prompt structure...',
+    'Applying receiver filter [' + selectedReceiver.toUpperCase() + ']...',
+    'Introducing controlled distortion...',
+    'Generating dream object...',
+    'Rendering dream letter...',
+  ];
+
+  const container = document.getElementById('conversion-lines');
+  container.innerHTML = '';
+  const fill = document.getElementById('progress-fill');
+  fill.style.width = '0%';
+
+  let i = 0;
+  const interval = setInterval(() => {
+    if (i < lines.length) {
+      const div = document.createElement('div');
+      div.className = 'conversion-line';
+      div.innerHTML = lines[i] + (i === lines.length - 1 ? '' : ' <span class="conversion-cursor"></span>');
+      container.appendChild(div);
+      // Trigger reflow for animation
+      void div.offsetWidth;
+      div.classList.add('visible');
+      fill.style.width = ((i + 1) / lines.length * 100) + '%';
+      i++;
+    } else {
+      clearInterval(interval);
+      // Mark all as done
+      setTimeout(() => {
+        document.querySelectorAll('.conversion-line').forEach(el => el.classList.add('done'));
+        fill.style.width = '100%';
+      }, 200);
+      // Transition to output
+      setTimeout(() => renderOutput(), 1000);
+    }
+  }, 1100);
+}
+
+// ==================== OUTPUT RENDERING ====================
+function renderOutput() {
+  if (p5Instance) { p5Instance.remove(); p5Instance = null; }
+
+  const data = dreamData[matchedScenario][selectedReceiver];
+  switchStage('output');
+
+  // Render dream letter text
+  const textContent = document.getElementById('output-text-content');
+  textContent.innerHTML = `
+    <div class="dream-letter fade-in" style="animation-delay:0.2s">${data.letter}</div>
+    <div class="metadata-block fade-in" style="animation-delay:0.6s">
+      <div class="metadata-row"><span class="metadata-label">Emotional Tone</span><span class="metadata-value">${data.metadata.tone}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Lost Fragment</span><span class="metadata-value">${data.metadata.lost}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Receiver Mode</span><span class="metadata-value">${receivers.find(r=>r.id===selectedReceiver).name}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Distortion Level</span><span class="metadata-value">${data.metadata.distortion}</span></div>
+    </div>
+    <div class="system-msg fade-in" style="animation-delay:0.8s">This dream has been converted. Original memory is no longer available.</div>
+    <button class="btn-another fade-in" style="animation-delay:1s" onclick="goToInput()">Submit Another Dream</button>
+  `;
+
+  // Create p5.js canvas for abstract dream image
+  const wrapper = document.getElementById('output-canvas-wrapper');
+  wrapper.innerHTML = '';
+
+  const sketch = (p) => {
+    const config = data.image;
+    let particles = [];
+    let t = 0;
+
+    p.setup = () => {
+      const size = wrapper.clientWidth || 400;
+      const canvas = p.createCanvas(size, size);
+      canvas.parent(wrapper);
+
+      // Create particles based on palette and style
+      const count = Math.floor(config.density * 200);
+      for (let j = 0; j < count; j++) {
+        particles.push({
+          x: p.random(p.width),
+          y: p.random(p.height),
+          vx: p.random(-1, 1) * config.speed * 2,
+          vy: p.random(-1, 1) * config.speed * 2,
+          size: p.random(2, 40),
+          color: config.palette[Math.floor(p.random(config.palette.length))],
+          alpha: p.random(30, 100),
+          angle: p.random(p.TWO_PI),
+        });
+      }
+    };
+
+    p.draw = () => {
+      p.background(8, 8, 15);
+
+      const style = config.style;
+
+      if (style === 'soft' || style === 'flowing') {
+        // Soft flowing: gentle shapes
+        p.noStroke();
+        for (const pt of particles) {
+          const x = pt.x + p.sin(t * pt.vy + pt.angle) * 30;
+          const y = pt.y + p.cos(t * pt.vx + pt.angle) * 30;
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.4);
+          p.fill(col);
+          p.ellipse(x, y, pt.size * 2, pt.size * 2);
+        }
+
+        // Large flowing shapes
+        p.blendMode(p.ADD);
+        for (let k = 0; k < 3; k++) {
+          const col = p.color(config.palette[Math.floor(config.palette.length / 2) + k % 3]);
+          col.setAlpha(8);
+          p.fill(col);
+          p.noStroke();
+          const cx = p.width / 2 + p.sin(t * 0.3 + k * 2) * 80;
+          const cy = p.height / 2 + p.cos(t * 0.4 + k * 2) * 80;
+          p.ellipse(cx, cy, 180, 180);
+        }
+        p.blendMode(p.BLEND);
+
+      } else if (style === 'sharp') {
+        // Sharp: angular, contrasting
+        p.noFill();
+        for (const pt of particles) {
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.6);
+          p.stroke(col);
+          p.strokeWeight(p.random(0.5, 2));
+          const x = pt.x + p.sin(t * 0.8 + pt.vy) * 50;
+          const y = pt.y + p.cos(t * 0.8 + pt.vx) * 50;
+          p.line(x, y, x + pt.vx * 20, y + pt.vy * 20);
+        }
+
+        // Angular overlays
+        p.stroke(config.palette[0]);
+        p.strokeWeight(0.5);
+        const alpha = p.map(p.sin(t * 0.5), -1, 1, 10, 40);
+        const col = p.color(config.palette[config.palette.length - 1]);
+        col.setAlpha(alpha);
+        p.fill(col);
+        p.noStroke();
+        for (let k = 0; k < 5; k++) {
+          const cx = p.width / 2 + p.cos(t + k * 1.2) * p.width * 0.3;
+          const cy = p.height / 2 + p.sin(t + k * 1.2) * p.height * 0.3;
+          p.push();
+          p.translate(cx, cy);
+          p.rotate(t * 0.3 + k);
+          p.triangle(0, -20, -15, 15, 15, 15);
+          p.pop();
+        }
+
+      } else if (style === 'geometric') {
+        // Geometric: clean lines, grids
+        p.noFill();
+        p.strokeWeight(0.5);
+
+        // Grid
+        for (let gx = 0; gx < p.width; gx += 40) {
+          const alpha = p.map(p.sin(t * 0.3 + gx * 0.01), -1, 1, 5, 20);
+          const col = p.color(config.palette[Math.floor(config.palette.length / 2)]);
+          col.setAlpha(alpha);
+          p.stroke(col);
+          p.line(gx, 0, gx, p.height);
+        }
+        for (let gy = 0; gy < p.height; gy += 40) {
+          const alpha = p.map(p.cos(t * 0.3 + gy * 0.01), -1, 1, 5, 20);
+          const col = p.color(config.palette[Math.floor(config.palette.length / 2)]);
+          col.setAlpha(alpha);
+          p.stroke(col);
+          p.line(0, gy, p.width, gy);
+        }
+
+        // Floating rectangles
+        p.noStroke();
+        for (let k = 0; k < 8; k++) {
+          const alpha = p.map(p.sin(t * 0.5 + k), -1, 1, 20, 60);
+          const col = p.color(config.palette[k % config.palette.length]);
+          col.setAlpha(alpha);
+          p.fill(col);
+          const rx = p.width / 2 + p.cos(t * 0.2 + k * 0.8) * p.width * 0.35;
+          const ry = p.height / 2 + p.sin(t * 0.2 + k * 0.8) * p.height * 0.35;
+          p.rect(rx - 15, ry - 15, 30, 30);
+        }
+
+      } else if (style === 'glitch') {
+        // Glitch: fragmented, displaced
+        p.noStroke();
+        for (const pt of particles) {
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.7);
+          p.fill(col);
+          const x = pt.x + (p.noise(pt.x * 0.01, pt.y * 0.01, t) - 0.5) * 80;
+          const y = pt.y + (p.noise(pt.y * 0.01, pt.x * 0.01, t) - 0.5) * 80;
+          p.rect(x, y, pt.size * 0.3, pt.size * 0.3);
+        }
+
+        // Glitch strips
+        const strips = 5 + Math.floor(p.noise(t * 10) * 5);
+        for (let s = 0; s < strips; s++) {
+          const sy = p.random(p.height);
+          const sh = p.random(5, 30);
+          const sx = p.random(-20, 20);
+          const col = p.color(config.palette[Math.floor(p.random(config.palette.length))]);
+          col.setAlpha(p.random(10, 50));
+          p.fill(col);
+          p.noStroke();
+          p.rect(sx, sy, p.width + 40, sh);
+        }
+
+        // Scan lines
+        p.stroke(config.palette[0]);
+        p.strokeWeight(1);
+        for (let ly = 0; ly < p.height; ly += 3) {
+          const alpha = p.map(p.sin(ly * 0.5 + t * 5), -1, 1, 0, 8);
+          const col = p.color(config.palette[0]);
+          col.setAlpha(alpha);
+          p.stroke(col);
+          p.line(0, ly, p.width, ly);
+        }
+      }
+
+      t += p.deltaTime * 0.001 * config.speed * 5;
+    };
+
+    p.windowResized = () => {
+      const size = wrapper.clientWidth || 400;
+      p.resizeCanvas(size, size);
+    };
+  };
+
+  p5Instance = new p5(sketch);
+}
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', () => {
+  updateClarity();
+});
+
+// Handle window resize for p5 canvas
+window.addEventListener('resize', () => {
+  if (p5Instance && currentStage === 'output') {
+    const wrapper = document.getElementById('output-canvas-wrapper');
+    if (wrapper) p5Instance.resizeCanvas(wrapper.clientWidth, wrapper.clientWidth);
+  }
+});
+</script>
+</body>
+</html>
