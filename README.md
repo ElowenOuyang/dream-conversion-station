@@ -11,7 +11,7 @@ This interactive web artwork takes personal dream fragments and processes them t
 
 ## Live Demo
 
-Visit: [https://YOUR_USERNAME.github.io/dream-conversion-station](https://YOUR_USERNAME.github.io/dream-conversion-station)
+Visit: [https://elowenouyang.github.io/dream-conversion-station](https://elowenouyang.github.io/dream-conversion-station)
 
 ## How It Works
 
