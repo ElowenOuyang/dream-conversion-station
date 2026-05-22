@@ -1089,7 +1089,7 @@ function renderOutput() {
       canvas.parent(wrapper);
 
       // Create particles based on palette and style
-      const count = Math.floor(config.density * 200);
+      const count = Math.floor(config.density * 500);
       for (let j = 0; j < count; j++) {
         particles.push({
           x: p.random(p.width),
@@ -1098,14 +1098,24 @@ function renderOutput() {
           vy: p.random(-1, 1) * config.speed * 2,
           size: p.random(2, 40),
           color: config.palette[Math.floor(p.random(config.palette.length))],
-          alpha: p.random(30, 100),
+          alpha: p.random(50, 160),
           angle: p.random(p.TWO_PI),
         });
       }
     };
 
     p.draw = () => {
-      p.background(8, 8, 15);
+      // Radial gradient background (brighter center → darker edges)
+      const ctx = p.drawingContext;
+      const grad = ctx.createRadialGradient(
+        p.width * 0.5, p.height * 0.5, 0,
+        p.width * 0.5, p.height * 0.5, p.width * 0.75
+      );
+      grad.addColorStop(0, 'rgba(20, 17, 36, 1)');
+      grad.addColorStop(0.45, 'rgba(14, 11, 28, 1)');
+      grad.addColorStop(1, 'rgba(6, 5, 14, 1)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, p.width, p.height);
 
       const style = config.style;
 
@@ -1116,7 +1126,7 @@ function renderOutput() {
         // Big blocky shapes (child's drawing style)
         for (let k = 0; k < 5; k++) {
           const col = p.color(config.palette[k % config.palette.length]);
-          col.setAlpha(30 + k * 8);
+          col.setAlpha(70 + k * 12);
           p.fill(col);
           const cx = p.width * 0.2 + p.noise(k * 10, t * 0.3) * p.width * 0.6;
           const cy = p.height * 0.2 + p.noise(k * 10 + 5, t * 0.3) * p.height * 0.6;
@@ -1150,9 +1160,9 @@ function renderOutput() {
         // Simple floating dots (stars / fireflies)
         for (const pt of particles) {
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.5);
+          col.setAlpha(pt.alpha * 0.75);
           p.fill(col);
-          p.circle(pt.x + p.sin(t + pt.angle) * 10 * sp, pt.y + p.cos(t + pt.angle) * 10 * sp, pt.size * 0.5);
+          p.circle(pt.x + p.sin(t + pt.angle) * 10 * sp, pt.y + p.cos(t + pt.angle) * 10 * sp, pt.size * 0.7);
         }
       }
 
@@ -1163,7 +1173,7 @@ function renderOutput() {
         p.noFill();
         for (let k = 0; k < 12; k++) {
           const col = p.color(config.palette[k % config.palette.length]);
-          col.setAlpha(20 + p.sin(t * 0.7 + k) * 15);
+          col.setAlpha(55 + p.sin(t * 0.7 + k) * 25);
           p.stroke(col);
           p.strokeWeight(1 + p.abs(p.sin(t * 0.5 + k)) * 3);
           p.beginShape();
@@ -1183,7 +1193,7 @@ function renderOutput() {
         p.noStroke();
         for (const pt of particles) {
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.3);
+          col.setAlpha(pt.alpha * 0.6);
           p.fill(col);
           const dx = pt.x + p.sin(t * 1.2 + pt.vx) * 60 * sp;
           const dy = pt.y + p.cos(t * 1.2 + pt.vy) * 60 * sp;
@@ -1192,9 +1202,9 @@ function renderOutput() {
 
         // Horizontal tension lines
         p.stroke(config.palette[config.palette.length - 1]);
-        p.strokeWeight(0.5);
+        p.strokeWeight(1);
         for (let h = 0; h < p.height; h += p.height / 12) {
-          const a = p.map(p.sin(t * 2 + h * 0.05), -1, 1, 5, 30);
+          const a = p.map(p.sin(t * 2 + h * 0.05), -1, 1, 15, 65);
           const col = p.color(config.palette[0]);
           col.setAlpha(a);
           p.stroke(col);
@@ -1209,7 +1219,7 @@ function renderOutput() {
         // Soft layered shapes
         for (const pt of particles) {
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.35);
+          col.setAlpha(pt.alpha * 0.7);
           p.fill(col);
           const bx = pt.x + p.sin(t * 0.4 + pt.angle) * 25 * sp;
           const by = pt.y + p.cos(t * 0.4 + pt.angle) * 25 * sp;
@@ -1220,7 +1230,7 @@ function renderOutput() {
         p.blendMode(p.ADD);
         for (let k = 0; k < 4; k++) {
           const col = p.color(config.palette[Math.floor(config.palette.length / 2) + k % 3]);
-          col.setAlpha(6);
+          col.setAlpha(18);
           p.fill(col);
           const cx = p.width / 2 + p.sin(t * 0.25 + k * 1.5) * 90 * sp;
           const cy = p.height / 2 + p.cos(t * 0.3 + k * 1.5) * 90 * sp;
@@ -1230,11 +1240,11 @@ function renderOutput() {
 
         // Thin connecting lines (neutral, calm)
         p.stroke(config.palette[1]);
-        p.strokeWeight(0.4);
+        p.strokeWeight(0.8);
         p.noFill();
         for (let l = 0; l < 6; l++) {
           const col = p.color(config.palette[1]);
-          col.setAlpha(10 + p.sin(t * 0.8 + l) * 5);
+          col.setAlpha(25 + p.sin(t * 0.8 + l) * 10);
           p.stroke(col);
           p.line(
             p.width * 0.2 + l * p.width * 0.15,
@@ -1253,7 +1263,7 @@ function renderOutput() {
         p.blendMode(p.ADD);
         for (let k = 0; k < 6; k++) {
           const col = p.color(config.palette[k % config.palette.length]);
-          col.setAlpha(4 + p.sin(t * 0.15 + k) * 2);
+          col.setAlpha(14 + p.sin(t * 0.15 + k) * 4);
           p.fill(col);
           const cx = p.width / 2 + p.sin(t * 0.12 + k * 1.8) * p.width * 0.35 * sp;
           const cy = p.height / 2 + p.cos(t * 0.1 + k * 1.8) * p.height * 0.35 * sp;
@@ -1264,19 +1274,19 @@ function renderOutput() {
         // Gentle particles (like dust in light)
         for (const pt of particles) {
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.25);
+          col.setAlpha(pt.alpha * 0.55);
           p.fill(col);
           const dx = pt.x + p.sin(t * 0.2 + pt.angle) * 15 * sp;
           const dy = pt.y + p.cos(t * 0.15 + pt.angle) * 15 * sp;
           p.noStroke();
-          p.circle(dx, dy, pt.size * 0.4);
+          p.circle(dx, dy, pt.size * 0.6);
         }
 
         // Very faint horizontal lines (like old film)
         p.stroke(config.palette[2]);
-        p.strokeWeight(0.3);
+        p.strokeWeight(0.7);
         for (let h = 0; h < p.height; h += 4) {
-          const a = p.map(p.sin(h * 0.02 + t * 0.05), -1, 1, 0, 4);
+          const a = p.map(p.sin(h * 0.02 + t * 0.05), -1, 1, 0, 12);
           const col = p.color(config.palette[2]);
           col.setAlpha(a);
           p.stroke(col);
@@ -1292,7 +1302,7 @@ function renderOutput() {
         for (let k = 0; k < 5; k++) {
           // Layer 1: teal-ish
           const col1 = p.color(config.palette[2]);
-          col1.setAlpha(12 + p.sin(t * 0.3 + k) * 5);
+          col1.setAlpha(32 + p.sin(t * 0.3 + k) * 10);
           p.fill(col1);
           const x1 = p.width / 2 + p.sin(t * 0.25 + k * 1.2) * p.width * 0.35 * sp;
           const y1 = p.height / 2 + p.cos(t * 0.25 + k * 1.2) * p.height * 0.35 * sp;
@@ -1300,7 +1310,7 @@ function renderOutput() {
 
           // Layer 2: offset (ghost/parallel)
           const col2 = p.color(config.palette[4]);
-          col2.setAlpha(8 + p.cos(t * 0.4 + k) * 3);
+          col2.setAlpha(22 + p.cos(t * 0.4 + k) * 6);
           p.fill(col2);
           const x2 = x1 + 30 * sp + p.sin(t * 0.3 + k + 2) * 20 * sp;
           const y2 = y1 + 20 * sp + p.cos(t * 0.3 + k + 2) * 20 * sp;
@@ -1310,7 +1320,7 @@ function renderOutput() {
         // Glitchy offset particles
         for (const pt of particles) {
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.6);
+          col.setAlpha(pt.alpha * 0.75);
           p.fill(col);
           // Two copies offset (double exposure effect)
           const ox = (p.noise(pt.x * 0.01, pt.y * 0.01, t) - 0.5) * 30 * sp;
@@ -1321,9 +1331,9 @@ function renderOutput() {
 
         // Horizontal scan/glitch lines
         p.stroke(config.palette[0]);
-        p.strokeWeight(0.5);
+        p.strokeWeight(0.8);
         for (let ly = 0; ly < p.height; ly += 6) {
-          const a = p.map(p.sin(ly * 0.03 + t * 3), -1, 1, 0, 6);
+          const a = p.map(p.sin(ly * 0.03 + t * 3), -1, 1, 0, 18);
           const col = p.color(config.palette[0]);
           col.setAlpha(a);
           p.stroke(col);
@@ -1340,7 +1350,7 @@ function renderOutput() {
         p.blendMode(p.ADD);
         for (let k = 0; k < 8; k++) {
           const col = p.color(config.palette[k % config.palette.length]);
-          col.setAlpha(3 + p.sin(t * 0.2 + k) * 2);
+          col.setAlpha(10 + p.sin(t * 0.2 + k) * 4);
           p.fill(col);
           const cx = p.width * 0.5 + p.noise(k * 3, t * 0.1) * p.width * 0.8 * sp - p.width * 0.4 * sp;
           const cy = p.height * 0.5 + p.noise(k * 3 + 100, t * 0.1) * p.height * 0.8 * sp - p.height * 0.4 * sp;
@@ -1350,17 +1360,17 @@ function renderOutput() {
         // Star-like particles (bright dots in the cloud)
         for (const pt of particles) {
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.7);
+          col.setAlpha(pt.alpha * 0.85);
           p.fill(col);
           const dx = pt.x + p.sin(t * 0.3 + pt.angle) * 15 * sp;
           const dy = pt.y + p.cos(t * 0.25 + pt.angle) * 15 * sp;
-          p.circle(dx, dy, pt.size * 0.4);
+          p.circle(dx, dy, pt.size * 0.65);
         }
         // Cosmic dust filaments
-        p.noFill(); p.strokeWeight(0.3);
+        p.noFill(); p.strokeWeight(0.8);
         for (let f = 0; f < 5; f++) {
           const col = p.color(config.palette[f % config.palette.length]);
-          col.setAlpha(12);
+          col.setAlpha(30);
           p.stroke(col);
           p.beginShape();
           for (let seg = 0; seg < 22; seg++) {
@@ -1379,7 +1389,7 @@ function renderOutput() {
         // Jagged shard polygons
         for (let k = 0; k < 10; k++) {
           const col = p.color(config.palette[k % config.palette.length]);
-          col.setAlpha(20 + p.sin(t * 0.5 + k) * 10);
+          col.setAlpha(45 + p.sin(t * 0.5 + k) * 15);
           p.fill(col);
           p.beginShape();
           const cx = p.width * 0.5 + p.sin(t * 0.4 + k * 1.1) * p.width * 0.4 * sp;
@@ -1396,7 +1406,7 @@ function renderOutput() {
         p.strokeWeight(1); p.noFill();
         for (let c = 0; c < 6; c++) {
           const col = p.color(config.palette[c % config.palette.length]);
-          col.setAlpha(20 + p.sin(t * 0.3 + c) * 10);
+          col.setAlpha(45 + p.sin(t * 0.3 + c) * 15);
           p.stroke(col);
           p.beginShape();
           p.push();
@@ -1411,12 +1421,12 @@ function renderOutput() {
         // Floating geometric particles
         for (const pt of particles) {
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.5);
+          col.setAlpha(pt.alpha * 0.75);
           p.fill(col);
           p.push();
           p.translate(pt.x + p.sin(t + pt.angle) * 10 * sp, pt.y + p.cos(t + pt.angle) * 10 * sp);
           p.rotate(pt.angle + t * 0.2);
-          p.rect(-pt.size * 0.2, -pt.size * 0.2, pt.size * 0.4, pt.size * 0.4);
+          p.rect(-pt.size * 0.35, -pt.size * 0.35, pt.size * 0.6, pt.size * 0.6);
           p.pop();
         }
       }
@@ -1435,7 +1445,7 @@ function renderOutput() {
             const y = p.height/2 + p.sin(angle) * r;
             const sz = p.map(r, 0, 220 * sp, 9, 1);
             const col = p.color(config.palette[a % config.palette.length]);
-            col.setAlpha(p.map(r, 0, 220 * sp, 45, 2));
+            col.setAlpha(p.map(r, 0, 220 * sp, 90, 6));
             p.fill(col);
             p.circle(x + p.sin(t + r * 0.02) * 3, y + p.cos(t + r * 0.02) * 3, sz);
           }
@@ -1444,7 +1454,7 @@ function renderOutput() {
         p.blendMode(p.ADD);
         for (let v = 0; v < 3; v++) {
           const col = p.color(config.palette[v % config.palette.length]);
-          col.setAlpha(4 + p.sin(t * 0.5 + v) * 2);
+          col.setAlpha(12 + p.sin(t * 0.5 + v) * 4);
           p.fill(col);
           p.circle(p.width/2, p.height/2, 60 + v * 40 + p.sin(t) * 15);
         }
@@ -1456,9 +1466,9 @@ function renderOutput() {
           const dx = p.width/2 + p.cos(angle) * orbitR;
           const dy = p.height/2 + p.sin(angle) * orbitR;
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.4);
+          col.setAlpha(pt.alpha * 0.7);
           p.fill(col);
-          p.circle(dx, dy, pt.size * 0.5);
+          p.circle(dx, dy, pt.size * 0.7);
         }
       }
 
@@ -1470,7 +1480,7 @@ function renderOutput() {
         for (let row = 0; row < 12; row++) {
           const yBase = p.height * 0.08 + row * p.height * 0.078;
           const col = p.color(config.palette[row % config.palette.length]);
-          col.setAlpha(12 + p.sin(t * 0.4 + row) * 5);
+          col.setAlpha(32 + p.sin(t * 0.4 + row) * 10);
           p.fill(col);
           p.beginShape();
           p.vertex(0, yBase);
@@ -1487,7 +1497,7 @@ function renderOutput() {
         for (let col = 0; col < 8; col++) {
           const xBase = p.width * 0.08 + col * p.width * 0.12;
           const c = p.color(config.palette[col % config.palette.length]);
-          c.setAlpha(3);
+          c.setAlpha(10);
           p.fill(c);
           p.beginShape();
           p.vertex(xBase, 0);
@@ -1503,12 +1513,12 @@ function renderOutput() {
         for (const pt of particles) {
           const waveOff = p.sin(t + pt.x * 0.015 + pt.y * 0.01) * 25 * sp;
           const col = p.color(pt.color);
-          col.setAlpha(pt.alpha * 0.5);
+          col.setAlpha(pt.alpha * 0.75);
           p.fill(col);
           p.circle(
             pt.x + waveOff,
             pt.y + p.cos(t * 0.8 + pt.x * 0.02) * 12 * sp,
-            pt.size * 0.6
+            pt.size * 0.8
           );
         }
       }
