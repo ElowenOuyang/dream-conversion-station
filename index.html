@@ -932,6 +932,69 @@ function matchScenario() {
   return best[1] > 0 ? best[0] : 'station';
 }
 
+// ==================== EMOTION & INPUT ANALYSIS ====================
+function analyzeEmotionTone(text) {
+  const warmWords = ['scared','afraid','fear','anxious','nervous','angry','furious','rage',
+    'excited','passionate','love','joy','happy','thrilled','intense','burning','hot','fire'];
+  const coldWords = ['sad','lonely','empty','numb','calm','peaceful','quiet','tired',
+    'depressed','melancholy','cold','alone','lost','still','gentle','soft','frozen','blue'];
+  const lower = text.toLowerCase();
+  let warm = 0, cool = 0;
+  for (const w of warmWords) if (lower.includes(w)) warm++;
+  for (const w of coldWords) if (lower.includes(w)) cool++;
+  if (warm > cool) return 'warm';
+  if (cool > warm) return 'cool';
+  return 'neutral';
+}
+
+function shiftPaletteColor(hex, tone) {
+  hex = hex.replace('#','');
+  let r = parseInt(hex.substring(0,2),16), g = parseInt(hex.substring(2,4),16),
+      b = parseInt(hex.substring(4,6),16);
+  if (tone === 'warm')  { r = Math.min(255, r + 25); b = Math.max(0, b - 18); }
+  if (tone === 'cool')  { b = Math.min(255, b + 25); r = Math.max(0, r - 18); }
+  return '#' + [r,g,b].map(c => Math.round(c).toString(16).padStart(2,'0')).join('');
+}
+
+function computeImageConfig(baseConfig) {
+  if (!dreamInput) return baseConfig;
+  const clarity = dreamInput.clarity || 3;
+  const clarityMap = {
+    1: { densityMul: 0.40, spreadMul: 2.8 },
+    2: { densityMul: 0.60, spreadMul: 2.0 },
+    3: { densityMul: 0.85, spreadMul: 1.3 },
+    4: { densityMul: 1.00, spreadMul: 1.0 },
+    5: { densityMul: 1.25, spreadMul: 0.65 },
+  };
+  const cp = clarityMap[clarity] || clarityMap[3];
+  const emotionText = (dreamInput.feel||'') + ' ' + (dreamInput.see||'');
+  const tone = analyzeEmotionTone(emotionText);
+  const fullText = [dreamInput.see,dreamInput.feel,dreamInput.space,dreamInput.sound]
+    .filter(Boolean).join(' ');
+  const wordCount = fullText.split(/\s+/).filter(w => w.length > 0).length;
+  let complexityMul = 1.0;
+  if (wordCount < 12)       complexityMul = 0.55;
+  else if (wordCount < 25)  complexityMul = 0.80;
+  else if (wordCount > 55)  complexityMul = 1.50;
+  let palette = [...baseConfig.palette];
+  if (tone !== 'neutral') palette = palette.map(c => shiftPaletteColor(c, tone));
+  return {
+    ...baseConfig,
+    palette,
+    density: baseConfig.density * cp.densityMul * complexityMul,
+    spread: cp.spreadMul,
+    emotionTone: tone,
+    clarityLevel: clarity,
+  };
+}
+
+// Style matrix: each (scenario × receiver) → unique visual approach
+const styleMatrix = {
+  station:   { age7:'childlike', adolescent:'fragment',  present:'balanced', elderly:'faded', parallel:'superimposed' },
+  corridor:  { age7:'nebulae',   adolescent:'wave',      present:'balanced', elderly:'faded', parallel:'fragment'      },
+  room:      { age7:'spiral',    adolescent:'turbulent',  present:'wave',     elderly:'nebulae', parallel:'superimposed' },
+};
+
 // ==================== CONVERSION ANIMATION ====================
 function startConversion() {
   if (!selectedReceiver) return;
@@ -985,21 +1048,28 @@ function startConversion() {
 function renderOutput() {
   if (p5Instance) { p5Instance.remove(); p5Instance = null; }
 
-  const data = dreamData[matchedScenario][selectedReceiver];
+  const baseConfig = dreamData[matchedScenario][selectedReceiver].image;
+  const overrideStyle = styleMatrix[matchedScenario]?.[selectedReceiver] || baseConfig.style;
+  const resolvedBase = { ...baseConfig, style: overrideStyle };
+  const config = computeImageConfig(resolvedBase);
+
   switchStage('output');
 
-  // Get receiver info for metadata
   const receiverInfo = receivers.find(r => r.id === selectedReceiver);
+  const baseData = dreamData[matchedScenario][selectedReceiver];
 
   // Render dream letter text
   const textContent = document.getElementById('output-text-content');
   textContent.innerHTML = `
-    <div class="dream-letter fade-in" style="animation-delay:0.2s">${data.letter}</div>
+    <div class="dream-letter fade-in" style="animation-delay:0.2s">${baseData.letter}</div>
     <div class="metadata-block fade-in" style="animation-delay:0.6s">
       <div class="metadata-row"><span class="metadata-label">Receiving Self</span><span class="metadata-dots"></span><span class="metadata-value">${receiverInfo.name}</span></div>
-      <div class="metadata-row"><span class="metadata-label">Temporal Lens</span><span class="metadata-dots"></span><span class="metadata-value">${data.metadata.lens}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Temporal Lens</span><span class="metadata-dots"></span><span class="metadata-value">${baseData.metadata.lens}</span></div>
       <div class="metadata-row"><span class="metadata-label">Dream Scenario</span><span class="metadata-dots"></span><span class="metadata-value">${matchedScenario}</span></div>
-      <div class="metadata-row"><span class="metadata-label">Distortion</span><span class="metadata-dots"></span><span class="metadata-value">${data.metadata.distortion}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Visual Style</span><span class="metadata-dots"></span><span class="metadata-value">${config.style}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Clarity</span><span class="metadata-dots"></span><span class="metadata-value">${clarityLabels[(config.clarityLevel||3)-1]}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Emotion Tone</span><span class="metadata-dots"></span><span class="metadata-value">${config.emotionTone||'neutral'}</span></div>
+      <div class="metadata-row"><span class="metadata-label">Distortion</span><span class="metadata-dots"></span><span class="metadata-value">${baseData.metadata.distortion}</span></div>
     </div>
     <div class="system-msg fade-in" style="animation-delay:0.8s">This dream has been converted. Original memory is no longer available.</div>
     <button class="btn-another fade-in" style="animation-delay:1s" onclick="goToInput()">Submit Another Dream</button>
@@ -1010,7 +1080,6 @@ function renderOutput() {
   wrapper.innerHTML = '';
 
   const sketch = (p) => {
-    const config = data.image;
     let particles = [];
     let t = 0;
 
@@ -1042,6 +1111,7 @@ function renderOutput() {
 
       // --- CHILDLIKE: bold strokes, primary shapes, scribbles ---
       if (style === 'childlike') {
+        const sp = config.spread || 1;
         p.noStroke();
         // Big blocky shapes (child's drawing style)
         for (let k = 0; k < 5; k++) {
@@ -1050,7 +1120,7 @@ function renderOutput() {
           p.fill(col);
           const cx = p.width * 0.2 + p.noise(k * 10, t * 0.3) * p.width * 0.6;
           const cy = p.height * 0.2 + p.noise(k * 10 + 5, t * 0.3) * p.height * 0.6;
-          const sz = 40 + p.sin(t * 0.5 + k) * 20;
+          const sz = (40 + p.sin(t * 0.5 + k) * 20) * sp;
           // Childish shapes: circles, squares, triangles
           if (k % 3 === 0) p.circle(cx, cy, sz);
           else if (k % 3 === 1) p.square(cx - sz/2, cy - sz/2, sz);
@@ -1069,8 +1139,8 @@ function renderOutput() {
           const sy = p.random(p.height);
           for (let se = 0; se < 6; se++) {
             p.curveVertex(
-              sx + p.random(-60, 60),
-              sy + p.random(-60, 60)
+              sx + p.random(-60, 60) * sp,
+              sy + p.random(-60, 60) * sp
             );
           }
           p.endShape();
@@ -1082,12 +1152,13 @@ function renderOutput() {
           const col = p.color(pt.color);
           col.setAlpha(pt.alpha * 0.5);
           p.fill(col);
-          p.circle(pt.x + p.sin(t + pt.angle) * 10, pt.y + p.cos(t + pt.angle) * 10, pt.size * 0.5);
+          p.circle(pt.x + p.sin(t + pt.angle) * 10 * sp, pt.y + p.cos(t + pt.angle) * 10 * sp, pt.size * 0.5);
         }
       }
 
       // --- TURBULENT: jagged, high-contrast, expressive ---
       else if (style === 'turbulent') {
+        const sp = config.spread || 1;
         // Jagged expressive brush strokes
         p.noFill();
         for (let k = 0; k < 12; k++) {
@@ -1101,8 +1172,8 @@ function renderOutput() {
           p.vertex(startX, startY);
           for (let se = 0; se < 8; se++) {
             p.vertex(
-              startX + p.random(-120, 120),
-              startY + p.random(-120, 120)
+              startX + p.random(-120, 120) * sp,
+              startY + p.random(-120, 120) * sp
             );
           }
           p.endShape(p.OPEN);
@@ -1114,8 +1185,8 @@ function renderOutput() {
           const col = p.color(pt.color);
           col.setAlpha(pt.alpha * 0.3);
           p.fill(col);
-          const dx = pt.x + p.sin(t * 1.2 + pt.vx) * 60;
-          const dy = pt.y + p.cos(t * 1.2 + pt.vy) * 60;
+          const dx = pt.x + p.sin(t * 1.2 + pt.vx) * 60 * sp;
+          const dy = pt.y + p.cos(t * 1.2 + pt.vy) * 60 * sp;
           p.circle(dx, dy, pt.size);
         }
 
@@ -1127,20 +1198,21 @@ function renderOutput() {
           const col = p.color(config.palette[0]);
           col.setAlpha(a);
           p.stroke(col);
-          p.line(0, h + p.sin(t + h * 0.02) * 10, p.width, h + p.sin(t + h * 0.02 + 1) * 10);
+          p.line(0, h + p.sin(t + h * 0.02) * 10 * sp, p.width, h + p.sin(t + h * 0.02 + 1) * 10 * sp);
         }
       }
 
       // --- BALANCED: neutral abstract (original balanced) ---
       else if (style === 'balanced') {
+        const sp = config.spread || 1;
         p.noStroke();
         // Soft layered shapes
         for (const pt of particles) {
           const col = p.color(pt.color);
           col.setAlpha(pt.alpha * 0.35);
           p.fill(col);
-          const bx = pt.x + p.sin(t * 0.4 + pt.angle) * 25;
-          const by = pt.y + p.cos(t * 0.4 + pt.angle) * 25;
+          const bx = pt.x + p.sin(t * 0.4 + pt.angle) * 25 * sp;
+          const by = pt.y + p.cos(t * 0.4 + pt.angle) * 25 * sp;
           p.circle(bx, by, pt.size * 1.2);
         }
 
@@ -1150,8 +1222,8 @@ function renderOutput() {
           const col = p.color(config.palette[Math.floor(config.palette.length / 2) + k % 3]);
           col.setAlpha(6);
           p.fill(col);
-          const cx = p.width / 2 + p.sin(t * 0.25 + k * 1.5) * 90;
-          const cy = p.height / 2 + p.cos(t * 0.3 + k * 1.5) * 90;
+          const cx = p.width / 2 + p.sin(t * 0.25 + k * 1.5) * 90 * sp;
+          const cy = p.height / 2 + p.cos(t * 0.3 + k * 1.5) * 90 * sp;
           p.circle(cx, cy, 160);
         }
         p.blendMode(p.BLEND);
@@ -1166,15 +1238,16 @@ function renderOutput() {
           p.stroke(col);
           p.line(
             p.width * 0.2 + l * p.width * 0.15,
-            p.height * 0.3 + p.sin(t + l) * 30,
+            p.height * 0.3 + p.sin(t + l) * 30 * sp,
             p.width * 0.2 + (l + 1) * p.width * 0.15,
-            p.height * 0.7 + p.cos(t + l) * 30
+            p.height * 0.7 + p.cos(t + l) * 30 * sp
           );
         }
       }
 
       // --- FADED: soft, atmospheric, low contrast, wisdom ---
       else if (style === 'faded') {
+        const sp = config.spread || 1;
         // Large soft atmospheric blobs
         p.noStroke();
         p.blendMode(p.ADD);
@@ -1182,8 +1255,8 @@ function renderOutput() {
           const col = p.color(config.palette[k % config.palette.length]);
           col.setAlpha(4 + p.sin(t * 0.15 + k) * 2);
           p.fill(col);
-          const cx = p.width / 2 + p.sin(t * 0.12 + k * 1.8) * p.width * 0.35;
-          const cy = p.height / 2 + p.cos(t * 0.1 + k * 1.8) * p.height * 0.35;
+          const cx = p.width / 2 + p.sin(t * 0.12 + k * 1.8) * p.width * 0.35 * sp;
+          const cy = p.height / 2 + p.cos(t * 0.1 + k * 1.8) * p.height * 0.35 * sp;
           p.circle(cx, cy, 120 + p.sin(t * 0.2 + k) * 30);
         }
         p.blendMode(p.BLEND);
@@ -1193,8 +1266,8 @@ function renderOutput() {
           const col = p.color(pt.color);
           col.setAlpha(pt.alpha * 0.25);
           p.fill(col);
-          const dx = pt.x + p.sin(t * 0.2 + pt.angle) * 15;
-          const dy = pt.y + p.cos(t * 0.15 + pt.angle) * 15;
+          const dx = pt.x + p.sin(t * 0.2 + pt.angle) * 15 * sp;
+          const dy = pt.y + p.cos(t * 0.15 + pt.angle) * 15 * sp;
           p.noStroke();
           p.circle(dx, dy, pt.size * 0.4);
         }
@@ -1213,6 +1286,7 @@ function renderOutput() {
 
       // --- SUPERIMPOSED: double exposure, ghosting, parallel timelines ---
       else if (style === 'superimposed') {
+        const sp = config.spread || 1;
         // Double-exposure ghost shapes (two layers offset)
         p.noStroke();
         for (let k = 0; k < 5; k++) {
@@ -1220,16 +1294,16 @@ function renderOutput() {
           const col1 = p.color(config.palette[2]);
           col1.setAlpha(12 + p.sin(t * 0.3 + k) * 5);
           p.fill(col1);
-          const x1 = p.width / 2 + p.sin(t * 0.25 + k * 1.2) * p.width * 0.35;
-          const y1 = p.height / 2 + p.cos(t * 0.25 + k * 1.2) * p.height * 0.35;
+          const x1 = p.width / 2 + p.sin(t * 0.25 + k * 1.2) * p.width * 0.35 * sp;
+          const y1 = p.height / 2 + p.cos(t * 0.25 + k * 1.2) * p.height * 0.35 * sp;
           p.circle(x1, y1, 80 + p.sin(t + k) * 20);
 
           // Layer 2: offset (ghost/parallel)
           const col2 = p.color(config.palette[4]);
           col2.setAlpha(8 + p.cos(t * 0.4 + k) * 3);
           p.fill(col2);
-          const x2 = x1 + 30 + p.sin(t * 0.3 + k + 2) * 20;
-          const y2 = y1 + 20 + p.cos(t * 0.3 + k + 2) * 20;
+          const x2 = x1 + 30 * sp + p.sin(t * 0.3 + k + 2) * 20 * sp;
+          const y2 = y1 + 20 * sp + p.cos(t * 0.3 + k + 2) * 20 * sp;
           p.circle(x2, y2, 70 + p.cos(t + k) * 15);
         }
 
@@ -1239,8 +1313,8 @@ function renderOutput() {
           col.setAlpha(pt.alpha * 0.6);
           p.fill(col);
           // Two copies offset (double exposure effect)
-          const ox = (p.noise(pt.x * 0.01, pt.y * 0.01, t) - 0.5) * 30;
-          const oy = (p.noise(pt.y * 0.01, pt.x * 0.01, t) - 0.5) * 30;
+          const ox = (p.noise(pt.x * 0.01, pt.y * 0.01, t) - 0.5) * 30 * sp;
+          const oy = (p.noise(pt.y * 0.01, pt.x * 0.01, t) - 0.5) * 30 * sp;
           p.rect(pt.x + ox, pt.y + oy, pt.size * 0.4, pt.size * 0.4);
           p.rect(pt.x - ox * 0.5, pt.y - oy * 0.5, pt.size * 0.3, pt.size * 0.3);
         }
@@ -1253,8 +1327,189 @@ function renderOutput() {
           const col = p.color(config.palette[0]);
           col.setAlpha(a);
           p.stroke(col);
-          const offset = p.sin(t * 5 + ly * 0.1) * (4 + p.sin(t * 2) * 3);
+          const offset = p.sin(t * 5 + ly * 0.1) * (4 + p.sin(t * 2) * 3) * sp;
           p.line(offset, ly, p.width + offset, ly);
+        }
+      }
+
+      // --- NEBULAE: cosmic clouds, star particles, organic swirls ---
+      else if (style === 'nebulae') {
+        const sp = config.spread || 1;
+        p.noStroke();
+        // Large gaseous blobs (cosmic clouds)
+        p.blendMode(p.ADD);
+        for (let k = 0; k < 8; k++) {
+          const col = p.color(config.palette[k % config.palette.length]);
+          col.setAlpha(3 + p.sin(t * 0.2 + k) * 2);
+          p.fill(col);
+          const cx = p.width * 0.5 + p.noise(k * 3, t * 0.1) * p.width * 0.8 * sp - p.width * 0.4 * sp;
+          const cy = p.height * 0.5 + p.noise(k * 3 + 100, t * 0.1) * p.height * 0.8 * sp - p.height * 0.4 * sp;
+          p.circle(cx, cy, 80 + p.sin(t * 0.3 + k) * 40);
+        }
+        p.blendMode(p.BLEND);
+        // Star-like particles (bright dots in the cloud)
+        for (const pt of particles) {
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.7);
+          p.fill(col);
+          const dx = pt.x + p.sin(t * 0.3 + pt.angle) * 15 * sp;
+          const dy = pt.y + p.cos(t * 0.25 + pt.angle) * 15 * sp;
+          p.circle(dx, dy, pt.size * 0.4);
+        }
+        // Cosmic dust filaments
+        p.noFill(); p.strokeWeight(0.3);
+        for (let f = 0; f < 5; f++) {
+          const col = p.color(config.palette[f % config.palette.length]);
+          col.setAlpha(12);
+          p.stroke(col);
+          p.beginShape();
+          for (let seg = 0; seg < 22; seg++) {
+            const sx = p.width * 0.05 + seg * p.width * 0.045;
+            const sy = p.height * 0.25 + f * p.height * 0.14 + p.sin(t * 0.2 + seg * 0.3 + f) * 45 * sp;
+            p.curveVertex(sx + p.sin(seg * 0.5) * 10, sy);
+          }
+          p.endShape();
+        }
+      }
+
+      // --- FRAGMENT: shattered glass, geometric shards, sharp edges ---
+      else if (style === 'fragment') {
+        const sp = config.spread || 1;
+        p.noStroke();
+        // Jagged shard polygons
+        for (let k = 0; k < 10; k++) {
+          const col = p.color(config.palette[k % config.palette.length]);
+          col.setAlpha(20 + p.sin(t * 0.5 + k) * 10);
+          p.fill(col);
+          p.beginShape();
+          const cx = p.width * 0.5 + p.sin(t * 0.4 + k * 1.1) * p.width * 0.4 * sp;
+          const cy = p.height * 0.5 + p.cos(t * 0.35 + k * 1.1) * p.height * 0.4 * sp;
+          const sides = 3 + Math.floor(k % 4);
+          for (let s = 0; s < sides; s++) {
+            const angle = (p.TWO_PI / sides) * s + k * 0.5;
+            const r = (30 + p.sin(t * 0.6 + k + s) * 15) * sp;
+            p.vertex(cx + p.cos(angle) * r, cy + p.sin(angle) * r);
+          }
+          p.endShape(p.CLOSE);
+        }
+        // Crack lines across the canvas
+        p.strokeWeight(1); p.noFill();
+        for (let c = 0; c < 6; c++) {
+          const col = p.color(config.palette[c % config.palette.length]);
+          col.setAlpha(20 + p.sin(t * 0.3 + c) * 10);
+          p.stroke(col);
+          p.beginShape();
+          p.push();
+          const sx = p.width * 0.2 + c * p.width * 0.12;
+          const sy = p.height * 0.3 + p.sin(c * 1.5) * p.height * 0.3;
+          for (let seg = 0; seg < 6; seg++) {
+            p.vertex(sx + p.random(-90, 90) * sp, sy + p.random(-90, 90) * sp);
+          }
+          p.pop();
+          p.endShape();
+        }
+        // Floating geometric particles
+        for (const pt of particles) {
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.5);
+          p.fill(col);
+          p.push();
+          p.translate(pt.x + p.sin(t + pt.angle) * 10 * sp, pt.y + p.cos(t + pt.angle) * 10 * sp);
+          p.rotate(pt.angle + t * 0.2);
+          p.rect(-pt.size * 0.2, -pt.size * 0.2, pt.size * 0.4, pt.size * 0.4);
+          p.pop();
+        }
+      }
+
+      // --- SPIRAL: fibonacci spirals, vortex, recursive motion ---
+      else if (style === 'spiral') {
+        const sp = config.spread || 1;
+        p.noStroke();
+        const arms = 6;
+        // Multiple spiral arms
+        for (let a = 0; a < arms; a++) {
+          const armAngle = (p.TWO_PI / arms) * a + t * 0.2;
+          for (let r = 0; r < 220 * sp; r += 3) {
+            const angle = armAngle + r * 0.05;
+            const x = p.width/2 + p.cos(angle) * r;
+            const y = p.height/2 + p.sin(angle) * r;
+            const sz = p.map(r, 0, 220 * sp, 9, 1);
+            const col = p.color(config.palette[a % config.palette.length]);
+            col.setAlpha(p.map(r, 0, 220 * sp, 45, 2));
+            p.fill(col);
+            p.circle(x + p.sin(t + r * 0.02) * 3, y + p.cos(t + r * 0.02) * 3, sz);
+          }
+        }
+        // Central vortex glow
+        p.blendMode(p.ADD);
+        for (let v = 0; v < 3; v++) {
+          const col = p.color(config.palette[v % config.palette.length]);
+          col.setAlpha(4 + p.sin(t * 0.5 + v) * 2);
+          p.fill(col);
+          p.circle(p.width/2, p.height/2, 60 + v * 40 + p.sin(t) * 15);
+        }
+        p.blendMode(p.BLEND);
+        // Orbiting particles
+        for (const pt of particles) {
+          const angle = t * 0.3 + pt.angle;
+          const orbitR = p.dist(pt.x, pt.y, p.width/2, p.height/2) * sp;
+          const dx = p.width/2 + p.cos(angle) * orbitR;
+          const dy = p.height/2 + p.sin(angle) * orbitR;
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.4);
+          p.fill(col);
+          p.circle(dx, dy, pt.size * 0.5);
+        }
+      }
+
+      // --- WAVE: interference patterns, ripple effects, sound visualization ---
+      else if (style === 'wave') {
+        const sp = config.spread || 1;
+        p.noStroke();
+        // Horizontal wave bands
+        for (let row = 0; row < 12; row++) {
+          const yBase = p.height * 0.08 + row * p.height * 0.078;
+          const col = p.color(config.palette[row % config.palette.length]);
+          col.setAlpha(12 + p.sin(t * 0.4 + row) * 5);
+          p.fill(col);
+          p.beginShape();
+          p.vertex(0, yBase);
+          for (let x = 0; x <= p.width; x += 5) {
+            const yOff = p.sin(t + x * 0.02 + row * 0.5) * 20 * sp;
+            const yOff2 = p.cos(t * 0.7 + x * 0.03 + row) * 15 * sp;
+            p.vertex(x, yBase + yOff + yOff2);
+          }
+          p.vertex(p.width, yBase);
+          p.endShape(p.CLOSE);
+        }
+        // Vertical interference waves
+        p.blendMode(p.ADD);
+        for (let col = 0; col < 8; col++) {
+          const xBase = p.width * 0.08 + col * p.width * 0.12;
+          const c = p.color(config.palette[col % config.palette.length]);
+          c.setAlpha(3);
+          p.fill(c);
+          p.beginShape();
+          p.vertex(xBase, 0);
+          for (let y = 0; y <= p.height; y += 5) {
+            const xOff = p.cos(t * 0.6 + y * 0.025 + col) * 12 * sp;
+            p.vertex(xBase + xOff, y);
+          }
+          p.vertex(xBase, p.height);
+          p.endShape(p.CLOSE);
+        }
+        p.blendMode(p.BLEND);
+        // Floating dots along wave paths
+        for (const pt of particles) {
+          const waveOff = p.sin(t + pt.x * 0.015 + pt.y * 0.01) * 25 * sp;
+          const col = p.color(pt.color);
+          col.setAlpha(pt.alpha * 0.5);
+          p.fill(col);
+          p.circle(
+            pt.x + waveOff,
+            pt.y + p.cos(t * 0.8 + pt.x * 0.02) * 12 * sp,
+            pt.size * 0.6
+          );
         }
       }
 
